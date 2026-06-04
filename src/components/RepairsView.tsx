@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
   Plus, Search, Edit2, Trash2, Printer, Wrench,
   Phone, Smartphone, Package, Settings, ChevronDown, X,
-  MessageSquare, Clock, History, MapPin, Layers
+  MessageSquare, Clock, History, MapPin, Layers, UserCheck
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import JsBarcode from 'jsbarcode';
@@ -677,6 +677,45 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
                     <Trash2 size={16} />
                   </button>
                 </div>
+              </div>
+
+              {/* ── Chips: mesa · días · técnico ── */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {/* Días en taller */}
+                <span className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black',
+                  daysAgo === 0 ? 'bg-gray-100 text-gray-500' :
+                  daysAgo <= 3  ? 'bg-blue-100 text-blue-700' :
+                  daysAgo <= 7  ? 'bg-amber-100 text-amber-700' :
+                  'bg-red-100 text-red-700'
+                )}>
+                  <Clock size={11} />
+                  {daysAgo === 0 ? 'Hoy' : daysAgo === 1 ? '1 día' : `${daysAgo} días`}
+                </span>
+
+                {/* Técnico */}
+                {techName && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black bg-indigo-100 text-indigo-700">
+                    <Wrench size={11} />
+                    {techName}
+                  </span>
+                )}
+
+                {/* Mesa */}
+                {workbenchName && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-700">
+                    <MapPin size={11} />
+                    {workbenchName}
+                  </span>
+                )}
+
+                {/* Estante */}
+                {shelfName && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-700">
+                    <Layers size={11} />
+                    {shelfName}
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
