@@ -505,10 +505,16 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
         type: warrantyType,
         defectivePart: warrantyType === 'part' ? warrantyPart : undefined,
       });
+      // Cerrar modal y resetear estado
       setWarrantyRepair(null);
       setWarrantyType(null);
       setWarrantyPart('');
+      // Mostrar reparaciones activas para que se vea la nueva reparación de garantía
+      setFilterStatus('active');
+      setSearchTerm('');
       onRefresh();
+    } catch (err: any) {
+      alert(`Error al aplicar garantía: ${err?.message ?? 'Error desconocido'}`);
     } finally { setApplyingWarranty(false); }
   };
 

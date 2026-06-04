@@ -378,8 +378,9 @@ export const api = {
     type: 'labor' | 'part';
     defectivePart?: string;
   }) => {
-    const { data: original } = await supabase.from('repairs').select('*').eq('id', repairId).single();
-    if (!original) throw new Error('Reparación no encontrada');
+    const { data: original, error: fetchErr } = await supabase
+      .from('repairs').select('*').eq('id', repairId).single();
+    if (fetchErr || !original) throw new Error('Reparación no encontrada');
 
     // Generar nuevo ticket
     let ticketId = generateTicketId();
@@ -390,24 +391,29 @@ export const api = {
     }
 
     const desc = opts.type === 'part'
-      ? `GARANTÍA — Repuesto defectuoso: ${opts.defectivePart}. Original: ${original.problem_description}`
-      : `GARANTÍA — Problema recurrente. Original: ${original.problem_description}`;
+      ? `[GARANTÍA] Repuesto defectuoso: ${opts.defectivePart}. Problema original: ${original.problem_description}`
+      : `[GARANTÍA] Problema recurrente. Problema original: ${original.problem_description}`;
 
-    const { data: newRepair, error } = await supabase.from('repairs').insert({
-      ticket_id:              ticketId,
-      customer_name:          original.customer_name,
-      customer_phone:         original.customer_phone,
-      device_model:           original.device_model,
-      problem_description:    desc,
-      repair_type:            original.repair_type,
-      status:                 'pending',
-      total_cost:             0,
-      parts_used:             opts.type === 'part' ? [] : [],
-      is_warranty:            true,
-      original_repair_id:     repairId,
-      warranty_defective_part: opts.defectivePart ?? null,
-      warranty_resolution:    null,
-    }).select().single();
+    const insertData: any = {
+      ticket_id:           ticketId,
+      customer_name:       original.customer_name,
+      customer_phone:      original.customer_phone,
+      device_model:        original.device_model,
+      device_brand:        original.device_brand ?? null,
+      problem_description: desc,
+      repair_type:         original.repair_type ?? null,
+      technician_id:       original.technician_id ?? null,
+      status:              'pending',
+      total_cost:          0,
+      parts_used:          [],
+      notes:               [],
+      is_warranty:         true,
+      original_repair_id:  repairId,
+    };
+    if (opts.defectivePart) insertData.warranty_defective_part = opts.defectivePart;
+
+    const { data: newRepair, error } = await supabase
+      .from('repairs').insert(insertData).select().single();
 
     if (error) throw new Error(error.message);
     await broadcast('repairs');
