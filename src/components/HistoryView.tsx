@@ -613,8 +613,10 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
             {filterType !== 'session' && (
               <input
                 type={filterType === 'day' ? 'date' : filterType === 'month' ? 'month' : 'number'}
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
+                value={filterType === 'month' ? selectedDate.slice(0, 7) : selectedDate}
+                onChange={e => setSelectedDate(
+                  filterType === 'month' ? e.target.value + '-01' : e.target.value
+                )}
                 className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm" />
             )}
 

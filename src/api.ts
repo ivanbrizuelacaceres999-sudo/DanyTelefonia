@@ -326,7 +326,9 @@ export const api = {
       if (!exists) break;
       ticketId = generateTicketId();
     }
-    const dbBody = { ...toDB(body), ticket_id: ticketId };
+    // newNote no es una columna — se descarta en la creación
+    const { newNote: _nn, technicianHistory: _th, notes: _n, ...cleanBody } = body;
+    const dbBody = { ...toDB(cleanBody), ticket_id: ticketId };
     const { data, error } = await supabase.from('repairs').insert(dbBody).select().single();
     if (error) throw new Error(error.message);
     await broadcast('repairs');

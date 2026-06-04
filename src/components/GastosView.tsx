@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Wallet, Plus, Trash2, Users, Settings, TrendingDown,
   Zap, Home, Save, AlertCircle, ChevronRight,
-  Lightbulb, TrendingUp, RefreshCw
+  Lightbulb, TrendingUp, RefreshCw, ArrowDownLeft, X
 } from 'lucide-react';
 import { NumericInput } from './ui/NumericInput';
 import { api } from '../api';
@@ -23,7 +23,7 @@ const fmtDate = (d: string) => {
   catch { return '—'; }
 };
 
-type TabKey = 'gastos' | 'sueldos' | 'config';
+type TabKey = 'gastos' | 'sueldos' | 'config' | 'destinos';
 
 export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) => {
   const [tab, setTab]                   = useState<TabKey>('gastos');
@@ -41,6 +41,16 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
   const [loadingRec, setLoadingRec] = useState(false);
   const [recLoaded,  setRecLoaded]  = useState(false);
 
+  // ── Destinos de retiro ─────────────────────────────────────────
+  const [motives,      setMotives]      = useState<{ _id: string; name: string }[]>([]);
+  const [newMotive,    setNewMotive]    = useState('');
+  const [addingMotive, setAddingMotive] = useState(false);
+  const [savingMotive, setSavingMotive] = useState(false);
+
+  const loadMotives = () => {
+    (api as any).getWithdrawalMotives().then((m: any) => { if (Array.isArray(m)) setMotives(m); });
+  };
+
   // ── Cargar config + destinos ───────────────────────────────────
   useEffect(() => {
     (api as any).getExpenseConfig().then((c: any) => {
@@ -48,6 +58,7 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
         setExpenseConfig({ operativePercent: c.operativePercent ?? 0, fixedPercent: c.fixedPercent ?? 0 });
       }
     });
+    loadMotives();
   }, []);
 
   // ── Cargar historial de cashflow al entrar en tab config ────────
@@ -149,10 +160,28 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
     onRefresh();
   };
 
+  const handleAddMotive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMotive.trim()) return;
+    setSavingMotive(true);
+    try {
+      await (api as any).createWithdrawalMotive(newMotive.trim());
+      setNewMotive('');
+      setAddingMotive(false);
+      loadMotives();
+    } finally { setSavingMotive(false); }
+  };
+
+  const handleDeleteMotive = async (id: string) => {
+    await (api as any).deleteWithdrawalMotive(id);
+    loadMotives();
+  };
+
   const TABS: { id: TabKey; label: string; icon: any }[] = [
-    { id: 'gastos',  label: 'Gastos Fijos',    icon: Wallet   },
-    { id: 'sueldos', label: 'Empleados',        icon: Users    },
-    { id: 'config',  label: 'Config. Costos %', icon: Settings },
+    { id: 'gastos',   label: 'Gastos Fijos',    icon: Wallet        },
+    { id: 'sueldos',  label: 'Empleados',        icon: Users         },
+    { id: 'destinos', label: 'Destinos Retiro',  icon: ArrowDownLeft },
+    { id: 'config',   label: 'Config. Costos %', icon: Settings      },
   ];
 
   return (
@@ -165,10 +194,15 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
           <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px] mt-1">Control de Costos Operativos</p>
         </div>
         {tab === 'gastos' && (
-          <button
-            onClick={() => setIsAddingCost(true)}
+          <button onClick={() => setIsAddingCost(true)}
             className="flex items-center gap-2 bg-red-600 text-white font-black px-5 py-3 rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-200 text-sm">
             <Plus size={16} /> Registrar Gasto
+          </button>
+        )}
+        {tab === 'destinos' && (
+          <button onClick={() => setAddingMotive(true)}
+            className="flex items-center gap-2 bg-indigo-600 text-white font-black px-5 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 text-sm">
+            <Plus size={16} /> Nuevo Destino
           </button>
         )}
       </div>
@@ -400,6 +434,74 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
                   <p className="text-[9px] font-bold text-white/60">/ semana · ≈ {fmtGs(totalMonthly)} / mes</p>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════════════
+          TAB: DESTINOS RETIRO
+          ════════════════════════════ */}
+      {tab === 'destinos' && (
+        <div className="space-y-4">
+
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+            Definí adónde va el dinero cuando se registra un retiro de caja
+          </p>
+
+          {/* Form nuevo destino */}
+          <AnimatePresence>
+            {addingMotive && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                className="bg-white p-6 rounded-[30px] border-2 border-indigo-100 shadow-sm">
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Nuevo Destino de Retiro</p>
+                <form onSubmit={handleAddMotive} className="space-y-4">
+                  <input
+                    required autoFocus
+                    placeholder="Ej: Pago de alquiler, Compra de mercadería, Gastos personales…"
+                    value={newMotive}
+                    onChange={e => setNewMotive(e.target.value)}
+                    className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-bold transition-all"
+                  />
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => { setAddingMotive(false); setNewMotive(''); }}
+                      className="flex-1 py-4 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 transition-colors">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={savingMotive || !newMotive.trim()}
+                      className="flex-1 py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                      {savingMotive ? 'Guardando…' : 'Guardar Destino'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Lista */}
+          {motives.length === 0 ? (
+            <div className="text-center py-20 bg-gray-50 rounded-[30px] text-gray-300">
+              <ArrowDownLeft size={40} className="mx-auto mb-4" />
+              <p className="font-black uppercase tracking-widest text-sm">Sin destinos configurados</p>
+              <p className="text-[10px] font-bold mt-2">Hacé clic en "Nuevo Destino" para crear el primero</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {motives.map(m => (
+                <motion.div key={m._id} layout
+                  className="bg-white flex items-center justify-between p-5 rounded-[25px] border border-gray-100 hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 flex-shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                      <ArrowDownLeft size={18} />
+                    </div>
+                    <p className="font-black text-gray-800">{m.name}</p>
+                  </div>
+                  <button onClick={() => handleDeleteMotive(m._id)}
+                    className="p-2 text-gray-300 hover:text-red-500 transition-colors rounded-xl hover:bg-red-50">
+                    <Trash2 size={16} />
+                  </button>
+                </motion.div>
+              ))}
             </div>
           )}
         </div>
