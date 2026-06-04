@@ -104,12 +104,22 @@ const RepairFormComponent = ({
   users = [], shelves, workbenches,
 }: RepairFormComponentProps) => {
   const [f, setF] = useState<RepairFormData>(initialData);
+  const [pendingPart, setPendingPart] = useState<Product | null>(null);
   const rt = repairTypes.find(t => t._id === f.repairType);
   const fixed = toNum(rt?.fixedCost);
   const parts = f.partsUsed.reduce((a, p) => a + toNum(p.price) * p.quantity, 0);
   const labor = parseInt(f.totalCost) || 0;
 
   const techUsers = users.filter(u => u.role === 'technician' || u.role === 'admin');
+
+  const addPartWithPrice = (price: number) => {
+    if (!pendingPart) return;
+    setF(prev => ({ ...prev, partsUsed: [...prev.partsUsed, {
+      id: pendingPart._id, name: pendingPart.model,
+      price, cost: toNum(pendingPart.costPrice), quantity: 1,
+    }]}));
+    setPendingPart(null);
+  };
 
   return (
     <form onSubmit={e => { e.preventDefault(); onSubmit(f); }} className="space-y-5">
@@ -227,10 +237,71 @@ const RepairFormComponent = ({
         </>
       )}
 
+      {/* ── Mesa y Estante en modo creación ── */}
+      {!isEdit && (
+        <div className="grid grid-cols-2 gap-4">
+          {workbenches.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest ml-3 flex items-center gap-1.5">
+                <Wrench size={10} /> Mesa de Reparación
+              </label>
+              <select value={f.workbenchId || ''} onChange={e => setF(p => ({ ...p, workbenchId: e.target.value }))}
+                className="w-full p-3 bg-blue-50 border-2 border-blue-100 focus:border-blue-500 rounded-2xl outline-none font-bold text-blue-800">
+                <option value="">Sin asignar</option>
+                {workbenches.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+              </select>
+            </div>
+          )}
+          {shelves.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-3 flex items-center gap-1.5">
+                <Layers size={10} /> Estante (si ya está listo)
+              </label>
+              <select value={f.shelfId || ''} onChange={e => setF(p => ({ ...p, shelfId: e.target.value }))}
+                className="w-full p-3 bg-emerald-50 border-2 border-emerald-100 focus:border-emerald-500 rounded-2xl outline-none font-bold text-emerald-800">
+                <option value="">Sin asignar</option>
+                {shelves.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Repuestos: siempre editable ── */}
       <div className="space-y-3">
         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-3">Repuestos del Stock</label>
-        <PartSearch products={products} onSelect={p => setF(prev => ({ ...prev, partsUsed: [...prev.partsUsed, { id: p._id, name: p.model, price: toNum(p.salePrice), cost: toNum(p.costPrice), quantity: 1 }] }))} />
+        <PartSearch products={products} onSelect={p => setPendingPart(p)} />
+
+        {/* ── Selector de precio ── */}
+        {pendingPart && (
+          <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">¿Qué precio usás?</p>
+                <p className="font-black text-gray-800 text-sm mt-0.5">{pendingPart.model}</p>
+              </div>
+              <button type="button" onClick={() => setPendingPart(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-white transition-all">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Normal', price: toNum(pendingPart.salePrice), color: 'bg-indigo-600 text-white shadow-indigo-200' },
+                { label: 'Mayorista', price: toNum(pendingPart.priceWholesale), color: 'bg-emerald-600 text-white shadow-emerald-200' },
+                { label: 'Económico', price: toNum(pendingPart.priceCheap), color: 'bg-amber-500 text-white shadow-amber-200' },
+              ].map(opt => (
+                <button key={opt.label} type="button"
+                  onClick={() => addPartWithPrice(opt.price)}
+                  disabled={opt.price === 0}
+                  className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center shadow-lg transition-all hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100', opt.color)}>
+                  <span className="text-[10px] uppercase tracking-widest">{opt.label}</span>
+                  <span className="text-sm mt-1">Gs. {opt.price.toLocaleString()}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {f.partsUsed.length > 0 && (
           <div className="space-y-2">
             {f.partsUsed.map((p, idx) => (
