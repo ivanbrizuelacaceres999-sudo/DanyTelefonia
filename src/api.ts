@@ -373,6 +373,56 @@ export const api = {
     return { ok: true };
   },
 
+  // ─── Aplicar garantía de reparación ─────────────────────────
+  applyRepairWarranty: async (repairId: string, opts: {
+    type: 'labor' | 'part';
+    defectivePart?: string;
+  }) => {
+    const { data: original } = await supabase.from('repairs').select('*').eq('id', repairId).single();
+    if (!original) throw new Error('Reparación no encontrada');
+
+    // Generar nuevo ticket
+    let ticketId = generateTicketId();
+    for (let i = 0; i < 10; i++) {
+      const { data: exists } = await supabase.from('repairs').select('id').eq('ticket_id', ticketId).maybeSingle();
+      if (!exists) break;
+      ticketId = generateTicketId();
+    }
+
+    const desc = opts.type === 'part'
+      ? `GARANTÍA — Repuesto defectuoso: ${opts.defectivePart}. Original: ${original.problem_description}`
+      : `GARANTÍA — Problema recurrente. Original: ${original.problem_description}`;
+
+    const { data: newRepair, error } = await supabase.from('repairs').insert({
+      ticket_id:              ticketId,
+      customer_name:          original.customer_name,
+      customer_phone:         original.customer_phone,
+      device_model:           original.device_model,
+      problem_description:    desc,
+      repair_type:            original.repair_type,
+      status:                 'pending',
+      total_cost:             0,
+      parts_used:             opts.type === 'part' ? [] : [],
+      is_warranty:            true,
+      original_repair_id:     repairId,
+      warranty_defective_part: opts.defectivePart ?? null,
+      warranty_resolution:    null,
+    }).select().single();
+
+    if (error) throw new Error(error.message);
+    await broadcast('repairs');
+    return toClient(newRepair);
+  },
+
+  // ─── Resolver garantía (pérdida o empate) ────────────────────
+  resolveRepairWarranty: async (repairId: string, resolution: 'loss' | 'provider_replenishment') => {
+    const { data } = await supabase.from('repairs')
+      .update({ warranty_resolution: resolution })
+      .eq('id', repairId).select().single();
+    await broadcast('repairs');
+    return toClient(data);
+  },
+
   // ─── Ventas ──────────────────────────────────────────────────
   getSales: async (params?: { sessionId?: string; date?: string }) => {
     let query = supabase.from('sales').select('*').order('date', { ascending: false });

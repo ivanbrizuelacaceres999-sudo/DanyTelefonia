@@ -110,6 +110,12 @@ export interface Repair {
   wholesalerId?: string;
   createdAt: string;
   endTime?: string;
+  // Garantía
+  isWarranty?: boolean;
+  originalRepairId?: string;
+  warrantyDays?: number;
+  warrantyDefectivePart?: string;
+  warrantyResolution?: 'loss' | 'provider_replenishment' | null;
 }
 
 export interface Sale {

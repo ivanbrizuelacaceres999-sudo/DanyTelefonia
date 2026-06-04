@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import {
   Plus, Search, Edit2, Trash2, Printer, Wrench,
   Phone, Smartphone, Package, Settings, ChevronDown, X,
-  MessageSquare, Clock, History, MapPin, Layers, UserCheck
+  MessageSquare, Clock, History, MapPin, Layers, UserCheck,
+  ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import JsBarcode from 'jsbarcode';
@@ -425,6 +426,12 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
   const [editingRepair, setEditingRepair] = useState<Repair | null>(null);
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [showLocationConfig, setShowLocationConfig] = useState(false);
+  // Garantía
+  const [warrantyRepair, setWarrantyRepair] = useState<Repair | null>(null);
+  const [warrantyType, setWarrantyType] = useState<'labor' | 'part' | null>(null);
+  const [warrantyPart, setWarrantyPart] = useState('');
+  const [applyingWarranty, setApplyingWarranty] = useState(false);
+  const [resolvingWarranty, setResolvingWarranty] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [newType, setNewType] = useState({ name: '', description: '', fixedCost: '' });
@@ -487,6 +494,30 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
     await api.updateRepair(editingRepair._id, data);
     setEditingRepair(null);
     onRefresh();
+  };
+
+  const handleApplyWarranty = async () => {
+    if (!warrantyRepair || !warrantyType) return;
+    if (warrantyType === 'part' && !warrantyPart) return;
+    setApplyingWarranty(true);
+    try {
+      await api.applyRepairWarranty(warrantyRepair._id, {
+        type: warrantyType,
+        defectivePart: warrantyType === 'part' ? warrantyPart : undefined,
+      });
+      setWarrantyRepair(null);
+      setWarrantyType(null);
+      setWarrantyPart('');
+      onRefresh();
+    } finally { setApplyingWarranty(false); }
+  };
+
+  const handleResolveWarranty = async (repairId: string, resolution: 'loss' | 'provider_replenishment') => {
+    setResolvingWarranty(repairId);
+    try {
+      await api.resolveRepairWarranty(repairId, resolution);
+      onRefresh();
+    } finally { setResolvingWarranty(null); }
   };
 
   const handleDelete = (id: string) => {
@@ -647,14 +678,26 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
           const shelfName = shelves.find(s => s._id === r.shelfId)?.name;
           return (
             <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} key={r._id}
-              className="bg-white p-6 rounded-[35px] shadow-sm border border-gray-100 hover:shadow-xl transition-all group relative overflow-hidden">
+              className={cn(
+                "p-6 rounded-[35px] shadow-sm border hover:shadow-xl transition-all group relative overflow-hidden",
+                r.isWarranty
+                  ? "bg-red-50 border-red-200"
+                  : "bg-white border-gray-100"
+              )}>
               <div className="flex justify-between items-start mb-5">
                 <div className="flex gap-3">
                   <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
                     <Smartphone size={28} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-gray-800 group-hover:text-indigo-600 transition-colors">{r.deviceModel}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xl font-black text-gray-800 group-hover:text-indigo-600 transition-colors">{r.deviceModel}</h3>
+                      {r.isWarranty && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 bg-red-500 text-white rounded-full uppercase tracking-widest">
+                          <ShieldAlert size={9} /> GARANTÍA
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm font-bold text-gray-400">{r.customerName}</p>
                     <p className="text-[10px] font-bold text-gray-300 mt-0.5">
                       Ticket #{getTicketNumber(r)} · {daysAgo === 0 ? 'Hoy' : `Hace ${daysAgo}d`}
@@ -778,6 +821,50 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
                 <div className="pt-2 mt-2 border-t border-gray-50 flex items-center gap-1.5">
                   <MessageSquare size={11} className="text-indigo-400" />
                   <span className="text-[10px] font-bold text-indigo-400">{r.notes.length} nota{r.notes.length > 1 ? 's' : ''}</span>
+                </div>
+              )}
+
+              {/* ── Botón aplicar garantía (solo entregadas, no garantía ya) ── */}
+              {r.status === 'delivered' && !r.isWarranty && (
+                <div className="pt-3 mt-3 border-t border-gray-100">
+                  <button onClick={() => { setWarrantyRepair(r); setWarrantyType(null); setWarrantyPart(''); }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border-2 border-red-200 text-red-500 font-black text-xs hover:bg-red-50 transition-all">
+                    <ShieldAlert size={14} /> Aplicar Garantía
+                  </button>
+                </div>
+              )}
+
+              {/* ── Resolución pérdida/empate (garantía de repuesto, entregada, sin resolver) ── */}
+              {r.isWarranty && r.warrantyDefectivePart && !r.warrantyResolution && r.status === 'delivered' && (
+                <div className="pt-3 mt-3 border-t border-red-200 space-y-2">
+                  <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">
+                    Repuesto: {r.warrantyDefectivePart} — ¿Cómo se resolvió?
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleResolveWarranty(r._id, 'provider_replenishment')}
+                      disabled={resolvingWarranty === r._id}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-emerald-600 text-white font-black text-xs hover:bg-emerald-700 transition-all disabled:opacity-50">
+                      <CheckCircle size={13} /> 🟡 Empate
+                    </button>
+                    <button onClick={() => handleResolveWarranty(r._id, 'loss')}
+                      disabled={resolvingWarranty === r._id}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-red-600 text-white font-black text-xs hover:bg-red-700 transition-all disabled:opacity-50">
+                      <X size={13} /> 🔴 Pérdida
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Badge resolución ya aplicada ── */}
+              {r.isWarranty && r.warrantyResolution && (
+                <div className={cn('mt-3 pt-3 border-t flex items-center gap-2',
+                  r.warrantyResolution === 'loss' ? 'border-red-200' : 'border-emerald-200')}>
+                  <span className={cn('text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest',
+                    r.warrantyResolution === 'loss'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-emerald-100 text-emerald-700')}>
+                    {r.warrantyResolution === 'loss' ? '🔴 Pérdida registrada' : '🟡 Empate — proveedor repuso'}
+                  </span>
                 </div>
               )}
             </motion.div>
@@ -1113,6 +1200,109 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
           onConfirm={() => { pendingConfirm.onConfirm(); setPendingConfirm(null); }}
           onCancel={() => setPendingConfirm(null)}
         />
+      )}
+
+      {/* ── Modal Aplicar Garantía ── */}
+      {warrantyRepair && (
+        <Modal title="Aplicar Garantía" onClose={() => { setWarrantyRepair(null); setWarrantyType(null); setWarrantyPart(''); }}>
+          <div className="space-y-5">
+
+            {/* Info de la reparación original */}
+            <div className="p-4 bg-gray-50 rounded-2xl space-y-1">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Reparación original</p>
+              <p className="font-black text-gray-800">{warrantyRepair.deviceModel} — {warrantyRepair.customerName}</p>
+              <p className="text-xs font-bold text-gray-500">{warrantyRepair.problemDescription}</p>
+            </div>
+
+            {/* Paso 1: tipo de garantía */}
+            {!warrantyType && (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">¿Por qué vuelve?</p>
+                <button onClick={() => setWarrantyType('labor')}
+                  className="w-full flex items-start gap-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl hover:border-amber-400 transition-all text-left">
+                  <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <Wrench size={20} />
+                  </div>
+                  <div>
+                    <p className="font-black text-gray-800">El problema volvió</p>
+                    <p className="text-[10px] font-bold text-gray-500 mt-0.5">No se usaron repuestos o la falla es de mano de obra. Se reabre sin costo.</p>
+                  </div>
+                </button>
+                <button onClick={() => setWarrantyType('part')}
+                  disabled={!warrantyRepair.partsUsed || warrantyRepair.partsUsed.length === 0}
+                  className="w-full flex items-start gap-4 p-4 bg-red-50 border-2 border-red-200 rounded-2xl hover:border-red-400 transition-all text-left disabled:opacity-40 disabled:cursor-not-allowed">
+                  <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 flex-shrink-0">
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <p className="font-black text-gray-800">Un repuesto falló</p>
+                    <p className="text-[10px] font-bold text-gray-500 mt-0.5">
+                      {warrantyRepair.partsUsed?.length
+                        ? 'Seleccionás cuál repuesto es el defectuoso.'
+                        : 'Esta reparación no tiene repuestos registrados.'}
+                    </p>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* Paso 2a: mano de obra — confirmar */}
+            {warrantyType === 'labor' && (
+              <div className="space-y-4">
+                <button onClick={() => setWarrantyType(null)} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">
+                  ← Cambiar
+                </button>
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                  <p className="font-black text-amber-700 text-sm">Se creará una nueva reparación:</p>
+                  <ul className="mt-2 space-y-1 text-[11px] font-bold text-amber-600">
+                    <li>• Mismo cliente y equipo</li>
+                    <li>• Costo: <span className="font-black">Gs. 0</span></li>
+                    <li>• Marcada como 🔴 GARANTÍA</li>
+                  </ul>
+                </div>
+                <button onClick={handleApplyWarranty} disabled={applyingWarranty}
+                  className="w-full py-4 rounded-2xl bg-amber-500 text-white font-black hover:bg-amber-600 transition-all disabled:opacity-50">
+                  {applyingWarranty ? 'Creando…' : 'Confirmar — Reabrir sin costo'}
+                </button>
+              </div>
+            )}
+
+            {/* Paso 2b: repuesto — elegir cuál */}
+            {warrantyType === 'part' && (
+              <div className="space-y-4">
+                <button onClick={() => { setWarrantyType(null); setWarrantyPart(''); }} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">
+                  ← Cambiar
+                </button>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">¿Qué repuesto falló?</p>
+                  {warrantyRepair.partsUsed?.map((p, i) => (
+                    <button key={i} onClick={() => setWarrantyPart(p.name)}
+                      className={cn('w-full flex items-center justify-between p-3 rounded-2xl border-2 transition-all text-left',
+                        warrantyPart === p.name
+                          ? 'bg-red-600 border-red-600 text-white'
+                          : 'bg-gray-50 border-gray-100 hover:border-red-300 text-gray-700')}>
+                      <div className="flex items-center gap-2">
+                        <Package size={14} />
+                        <span className="font-black text-sm">{p.name}</span>
+                      </div>
+                      <span className="text-[10px] font-bold">×{p.quantity}</span>
+                    </button>
+                  ))}
+                </div>
+                {warrantyPart && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-2xl space-y-1">
+                    <p className="font-black text-red-700 text-sm">Repuesto defectuoso: {warrantyPart}</p>
+                    <p className="text-[10px] font-bold text-red-500">Se reabre la reparación sin costo. Después marcás pérdida o empate cuando se resuelva.</p>
+                  </div>
+                )}
+                <button onClick={handleApplyWarranty} disabled={applyingWarranty || !warrantyPart}
+                  className="w-full py-4 rounded-2xl bg-red-600 text-white font-black hover:bg-red-700 transition-all disabled:opacity-50">
+                  {applyingWarranty ? 'Creando…' : 'Confirmar — Garantía de repuesto'}
+                </button>
+              </div>
+            )}
+          </div>
+        </Modal>
       )}
     </div>
   );
