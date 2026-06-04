@@ -329,6 +329,10 @@ export const api = {
     // newNote no es una columna — se descarta en la creación
     const { newNote: _nn, technicianHistory: _th, notes: _n, ...cleanBody } = body;
     const dbBody = { ...toDB(cleanBody), ticket_id: ticketId };
+    // Campos UUID vacíos deben ser null, no ""
+    if (!dbBody.technician_id) dbBody.technician_id = null;
+    if (!dbBody.shelf_id)      dbBody.shelf_id      = null;
+    if (!dbBody.workbench_id)  dbBody.workbench_id  = null;
     const { data, error } = await supabase.from('repairs').insert(dbBody).select().single();
     if (error) throw new Error(error.message);
     await broadcast('repairs');
