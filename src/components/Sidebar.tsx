@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard, Package, Wrench, ShoppingCart,
   Users, History, ShieldCheck, LogOut, ChevronLeft, ChevronRight,
-  TrendingUp, Wifi, Wallet, MoreHorizontal, X,
+  TrendingUp, Wallet, MoreHorizontal, X,
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { cn } from '../lib/utils';
@@ -47,7 +47,6 @@ export const Sidebar = ({ user, activeTab, setActiveTab, collapsed, setCollapsed
     { id: 'stats',         label: 'Estadísticas',    icon: TrendingUp,      roles: ['admin'] },
     { id: 'gastos',        label: 'Gastos',          icon: Wallet,          roles: ['admin'] },
     { id: 'users',         label: 'Usuarios',        icon: Users,           roles: ['admin'] },
-    { id: 'webconnection', label: 'Conexión Web',    icon: Wifi,            roles: ['admin'] },
   ];
 
   const filteredItems   = menuItems.filter(item => item.roles.includes(user.role));

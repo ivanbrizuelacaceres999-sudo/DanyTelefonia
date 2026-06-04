@@ -117,6 +117,12 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
       sessionStorage.removeItem('openSaleId');
       setTimeout(() => setSelectedSaleId(openSaleId), 300);
     }
+    // Si venimos del Dashboard (alerta de garantías)
+    const openWarrantyTab = sessionStorage.getItem('openWarrantyTab');
+    if (openWarrantyTab) {
+      sessionStorage.removeItem('openWarrantyTab');
+      setMainTab('garantias');
+    }
   }, []);
 
   // Recargar ventas cuando cambia el filtro

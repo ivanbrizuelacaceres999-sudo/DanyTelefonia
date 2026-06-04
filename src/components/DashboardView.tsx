@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, ShoppingBag, Wrench, AlertCircle, DollarSign, CreditCard, Smartphone, Clock, CheckCircle, ShieldAlert, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Product, Repair, Sale, CashSession } from '../types';
@@ -27,7 +27,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
         });
       }
     });
-    // Garantías defectuosas en espera de respuesta del fabricante
+    // GarantÃ­as defectuosas en espera de respuesta del fabricante
     api.getWarranties().then((ws: any[]) => {
       setDefectiveWarranties(ws.filter((w: any) => w.status === 'defective'));
     }).catch(() => {});
@@ -62,7 +62,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
         <div>
           <h2 className="text-4xl font-black text-gray-800 tracking-tighter">Dashboard</h2>
           <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px] mt-1">
-            Resumen Operativo · {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long' })}
+            Resumen Operativo Â· {new Date().toLocaleDateString('es-PY', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
         {session && (
@@ -74,7 +74,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Efectivo en Caja</p>
               <p className="text-xl font-black text-emerald-600 tracking-tighter">Gs. {cashInBox.toLocaleString()}</p>
               {totalWithdrawn > 0 && (
-                <p className="text-[9px] font-bold text-orange-400">−Gs. {totalWithdrawn.toLocaleString()} retirado</p>
+                <p className="text-[9px] font-bold text-orange-400">âˆ’Gs. {totalWithdrawn.toLocaleString()} retirado</p>
               )}
             </div>
             <div className="h-10 w-px bg-gray-100 mx-2" />
@@ -90,7 +90,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
         )}
       </div>
 
-      {/* ── Banners de alerta rápida ── */}
+      {/* â”€â”€ Banners de alerta rÃ¡pida â”€â”€ */}
       <AnimatePresence>
         {(defectiveWarranties.length > 0 || delayedRepairs.length > 0) && (
           <motion.div
@@ -99,10 +99,10 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
             exit={{ opacity: 0, y: -8 }}
             className="space-y-3"
           >
-            {/* Banner garantías defectuosas */}
+            {/* Banner garantÃ­as defectuosas */}
             {defectiveWarranties.length > 0 && (
               <button
-                onClick={() => onNavigate('warranty')}
+                onClick={() => () => { sessionStorage.setItem('openWarrantyTab', 'true'); onNavigate('history'); }}
                 className="w-full flex items-center justify-between gap-4 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-[22px] hover:bg-red-100 hover:shadow-lg hover:shadow-red-100 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -114,13 +114,13 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
                       {defectiveWarranties.length} producto{defectiveWarranties.length !== 1 ? 's' : ''} esperando respuesta del fabricante
                     </p>
                     <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-0.5">
-                      {defectiveWarranties.map((w: any) => w.productName).slice(0, 3).join(' · ')}
-                      {defectiveWarranties.length > 3 ? ` · +${defectiveWarranties.length - 3} más` : ''}
+                      {defectiveWarranties.map((w: any) => w.productName).slice(0, 3).join(' Â· ')}
+                      {defectiveWarranties.length > 3 ? ` Â· +${defectiveWarranties.length - 3} mÃ¡s` : ''}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 font-black text-sm flex-shrink-0">
-                  Ir a Garantías <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  Ir a GarantÃ­as <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </button>
             )}
@@ -137,11 +137,11 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
                   </div>
                   <div className="text-left">
                     <p className="font-black text-sm">
-                      {delayedRepairs.length} reparación{delayedRepairs.length !== 1 ? 'es' : ''} con más de 2 días sin resolución
+                      {delayedRepairs.length} reparaciÃ³n{delayedRepairs.length !== 1 ? 'es' : ''} con mÃ¡s de 2 dÃ­as sin resoluciÃ³n
                     </p>
                     <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-0.5">
-                      {delayedRepairs.map((r: any) => r.customerName).slice(0, 3).join(' · ')}
-                      {delayedRepairs.length > 3 ? ` · +${delayedRepairs.length - 3} más` : ''}
+                      {delayedRepairs.map((r: any) => r.customerName).slice(0, 3).join(' Â· ')}
+                      {delayedRepairs.length > 3 ? ` Â· +${delayedRepairs.length - 3} mÃ¡s` : ''}
                     </p>
                   </div>
                 </div>
@@ -154,10 +154,10 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
         )}
       </AnimatePresence>
 
-      {/* ── Stats grid — 4 tarjetas clickeables ── */}
+      {/* â”€â”€ Stats grid â€” 4 tarjetas clickeables â”€â”€ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
-        {/* 1. Ventas del día */}
+        {/* 1. Ventas del dÃ­a */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}
           className="bg-indigo-600 p-6 rounded-[30px] text-white shadow-xl shadow-indigo-200">
           <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
@@ -165,10 +165,10 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
           </div>
           <p className="text-3xl font-black tracking-tighter">Gs. {todayRevenue.toLocaleString()}</p>
           <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mt-1">Ventas de Hoy</p>
-          <p className="text-[9px] text-indigo-300 mt-0.5">{todayOps} operación{todayOps !== 1 ? 'es' : ''}</p>
+          <p className="text-[9px] text-indigo-300 mt-0.5">{todayOps} operaciÃ³n{todayOps !== 1 ? 'es' : ''}</p>
         </motion.div>
 
-        {/* 2. Reparaciones pendientes — CLICKEABLE */}
+        {/* 2. Reparaciones pendientes â€” CLICKEABLE */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
           onClick={() => onNavigate('repairs')}
@@ -187,7 +187,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
           <div className="flex items-center justify-between mt-1">
             {delayedRepairs.length > 0 ? (
               <p className="text-[9px] text-red-500 font-bold">
-                ⚠️ {delayedRepairs.length} demorada{delayedRepairs.length !== 1 ? 's' : ''}
+                âš ï¸ {delayedRepairs.length} demorada{delayedRepairs.length !== 1 ? 's' : ''}
               </p>
             ) : <span />}
             <ChevronRight size={13} className="text-gray-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
@@ -206,17 +206,17 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Reparaciones Cobradas Hoy</p>
         </motion.div>
 
-        {/* 4. Garantías defectuosas / Stock bajo — CLICKEABLE */}
+        {/* 4. GarantÃ­as defectuosas / Stock bajo â€” CLICKEABLE */}
         {defectiveWarranties.length > 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            onClick={() => onNavigate('warranty')}
+            onClick={() => () => { sessionStorage.setItem('openWarrantyTab', 'true'); onNavigate('history'); }}
             className="p-6 rounded-[30px] border bg-red-50 border-red-200 shadow-sm cursor-pointer hover:shadow-xl hover:border-red-400 transition-all group">
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-4 bg-red-500 text-white group-hover:bg-red-600 transition-colors">
               <ShieldAlert size={22} />
             </div>
             <p className="text-3xl font-black text-gray-800 tracking-tighter">{defectiveWarranties.length}</p>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Garantías Defectuosas</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">GarantÃ­as Defectuosas</p>
             <div className="flex items-center justify-between mt-1">
               <p className="text-[9px] text-red-500 font-bold">Esperando fabricante</p>
               <ChevronRight size={13} className="text-gray-300 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all" />
@@ -231,7 +231,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
               <AlertCircle size={22} />
             </div>
             <p className="text-3xl font-black text-gray-800 tracking-tighter">{lowStockProducts.length}</p>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Stock Bajo (≤3)</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Stock Bajo (â‰¤3)</p>
             {outOfStock.length > 0 && (
               <p className="text-[9px] text-red-500 font-bold mt-0.5">{outOfStock.length} sin stock</p>
             )}
@@ -256,9 +256,9 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
                 <div>
                   <p className="font-bold text-gray-800 text-sm">{sale.customerName || 'Consumidor Final'}</p>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    {new Date(sale.date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })} · {sale.paymentMethod}
+                    {new Date(sale.date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })} Â· {sale.paymentMethod}
                     {sale.items?.some((i: any) => i.type === 'repair') && (
-                      <span className="ml-2 text-amber-500">🔧</span>
+                      <span className="ml-2 text-amber-500">ðŸ”§</span>
                     )}
                   </p>
                 </div>
@@ -274,7 +274,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
           </div>
         </motion.div>
 
-        {/* Reparaciones pendientes — clickeables */}
+        {/* Reparaciones pendientes â€” clickeables */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-6">
@@ -312,7 +312,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
                     <div>
                       <p className="font-bold text-gray-800 text-sm">{r.deviceModel}</p>
                       <p className="text-[10px] font-bold text-gray-400 uppercase">
-                        {r.customerName} · {daysAgo === 0 ? 'Hoy' : `${daysAgo}d atrás`}
+                        {r.customerName} Â· {daysAgo === 0 ? 'Hoy' : `${daysAgo}d atrÃ¡s`}
                       </p>
                     </div>
                   </div>
@@ -328,13 +328,13 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
             {pendingRepairs.length === 0 && (
               <div className="text-center py-10 text-gray-300">
                 <CheckCircle size={36} className="mx-auto mb-3" />
-                <p className="font-black uppercase tracking-widest text-sm">Todo al día</p>
+                <p className="font-black uppercase tracking-widest text-sm">Todo al dÃ­a</p>
               </div>
             )}
           </div>
         </motion.div>
 
-        {/* ── Garantías defectuosas esperando fabricante ── */}
+        {/* â”€â”€ GarantÃ­as defectuosas esperando fabricante â”€â”€ */}
         {defectiveWarranties.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
@@ -345,13 +345,13 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
                 <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
                   <ShieldAlert size={18} />
                 </div>
-                Garantías — Esperando Fabricante
+                GarantÃ­as â€” Esperando Fabricante
                 <span className="text-[10px] font-black px-3 py-1 bg-red-100 text-red-600 rounded-full uppercase tracking-widest">
                   {defectiveWarranties.length} pendiente{defectiveWarranties.length !== 1 ? 's' : ''}
                 </span>
               </h3>
               <button
-                onClick={() => onNavigate('warranty')}
+                onClick={() => () => { sessionStorage.setItem('openWarrantyTab', 'true'); onNavigate('history'); }}
                 className="flex items-center gap-1 text-[11px] font-black text-indigo-600 hover:text-indigo-800 transition-colors group"
               >
                 Gestionar <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -362,7 +362,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
               {defectiveWarranties.map((w: any) => (
                 <button
                   key={w._id}
-                  onClick={() => onNavigate('warranty')}
+                  onClick={() => () => { sessionStorage.setItem('openWarrantyTab', 'true'); onNavigate('history'); }}
                   className="flex items-center gap-4 p-4 bg-red-50 border border-red-100 rounded-[24px] hover:bg-red-100 hover:border-red-300 hover:shadow-lg hover:shadow-red-50 transition-all text-left group"
                 >
                   <div className="w-11 h-11 bg-red-100 group-hover:bg-red-200 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors">
@@ -371,7 +371,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
                   <div className="flex-1 min-w-0">
                     <p className="font-black text-gray-800 text-sm truncate">{w.productName}</p>
                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate">{w.customerName}</p>
-                    <p className="text-[10px] font-black text-red-500 mt-0.5 uppercase tracking-widest">🔴 Defectuoso · Esperando respuesta</p>
+                    <p className="text-[10px] font-black text-red-500 mt-0.5 uppercase tracking-widest">ðŸ”´ Defectuoso Â· Esperando respuesta</p>
                   </div>
                   <ChevronRight size={15} className="text-red-300 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </button>
@@ -380,17 +380,17 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
 
             {/* CTA prominente */}
             <button
-              onClick={() => onNavigate('warranty')}
+              onClick={() => () => { sessionStorage.setItem('openWarrantyTab', 'true'); onNavigate('history'); }}
               className="mt-5 w-full flex items-center justify-center gap-2 py-3.5 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 shadow-lg shadow-red-200 transition-all group text-sm"
             >
               <ShieldAlert size={16} />
-              Resolver garantías ahora
+              Resolver garantÃ­as ahora
               <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </motion.div>
         )}
 
-        {/* Stock bajo — solo si hay productos y no hay garantías defectuosas ocupando el espacio */}
+        {/* Stock bajo â€” solo si hay productos y no hay garantÃ­as defectuosas ocupando el espacio */}
         {(lowStockProducts.length > 0 || outOfStock.length > 0) && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className={cn(

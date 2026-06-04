@@ -12,7 +12,6 @@ import { HistoryView } from './components/HistoryView';
 import { StatisticsView } from './components/StatisticsView';
 import { WarrantyView } from './components/WarrantyView';
 import { UsersView } from './components/UsersView';
-import { WebConnectView } from './components/WebConnectView';
 import { GastosView } from './components/GastosView';
 import { motion, AnimatePresence } from 'motion/react';
 import { socket, connectSocket, disconnectSocket, UpdateEvent } from './socket';
@@ -241,7 +240,6 @@ function App() {
       case 'gastos':        return <GastosView fixedCosts={fixedCosts} users={users} onRefresh={fetchData} />;
       case 'warranty':      return <WarrantyView sales={sales} products={products} onRefresh={fetchData} />;
       case 'users':         return <UsersView users={users} onRefresh={fetchData} />;
-      case 'webconnection': return <WebConnectView />;
       default:              return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
     }
   };
