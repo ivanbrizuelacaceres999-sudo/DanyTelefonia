@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, ShoppingBag, Wallet, ChevronRight, Wrench, Smartphone, Trash2,
   ShieldCheck, ShieldAlert, ShieldX, CheckCircle, X, AlertCircle, RefreshCw,
-  Banknote, ArrowDownLeft, FileDown, Calendar, Loader2
+  Banknote, ArrowDownLeft, FileDown, Calendar, Loader2, Search, Hash
 } from 'lucide-react';
 import { buildExcel } from '../utils/exportExcel';
 import { api } from '../api';
@@ -62,6 +62,9 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
   const [addingWithdrawal,  setAddingWithdrawal]   = useState(false);
   const [savingWithdrawal,  setSavingWithdrawal]   = useState(false);
   const [newWithdrawal,     setNewWithdrawal]      = useState({ amount: '', motiveId: '', note: '' });
+
+  // ── Búsqueda ───────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
 
   // ── Exportar Excel ─────────────────────────────────────────────
   type ExportPeriod = 'today' | 'week' | 'month' | 'custom';
@@ -194,6 +197,17 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
   })();
 
   const showsFixedCosts = filterType === 'month' || filterType === 'year';
+
+  // Búsqueda sobre las ventas ya filtradas por período
+  const visibleSales: Sale[] = searchQuery.trim()
+    ? filteredSales.filter(s => {
+        const q = searchQuery.trim().toLowerCase();
+        return (
+          s._id.toLowerCase().includes(q) ||
+          (s.customerName || '').toLowerCase().includes(q)
+        );
+      })
+    : filteredSales;
 
   // ── Cálculos ─────────────────────────────────────────────
   const revenue    = filteredSales.reduce((a, s) => a + toNum(s.total), 0);
@@ -603,6 +617,24 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
                 onChange={e => setSelectedDate(e.target.value)}
                 className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm" />
             )}
+
+            {/* Buscador por ID o nombre */}
+            <div className="relative">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar por ID de ticket o nombre del cliente…"
+                className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm focus:border-indigo-300 focus:bg-white transition-all"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Tarjetas de estadísticas */}
@@ -714,9 +746,11 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
           {/* Lista de ventas */}
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ventas del Período</h3>
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                {searchQuery.trim() ? 'Resultados de búsqueda' : 'Ventas del Período'}
+              </h3>
               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-widest">
-                {filteredSales.length} operaciones
+                {visibleSales.length}{searchQuery.trim() && filteredSales.length !== visibleSales.length ? ` de ${filteredSales.length}` : ''} operaciones
               </span>
             </div>
 
@@ -724,13 +758,20 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
               <div className="flex items-center justify-center py-20">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
               </div>
-            ) : filteredSales.length === 0 ? (
+            ) : visibleSales.length === 0 ? (
               <div className="text-center py-20 bg-gray-50 rounded-[30px] text-gray-300">
                 <ShoppingBag size={40} className="mx-auto mb-4" />
-                <p className="font-black uppercase tracking-widest text-sm">Sin ventas en este período</p>
+                <p className="font-black uppercase tracking-widest text-sm">
+                  {searchQuery.trim() ? 'Sin resultados para esa búsqueda' : 'Sin ventas en este período'}
+                </p>
+                {searchQuery.trim() && (
+                  <button onClick={() => setSearchQuery('')} className="mt-3 text-[11px] font-black text-indigo-400 hover:text-indigo-600 underline">
+                    Limpiar búsqueda
+                  </button>
+                )}
               </div>
             ) : (
-              filteredSales.map(s => {
+              visibleSales.map(s => {
                 const adjList   = ((s as any).warrantyAdjustments || []) as any[];
                 const hasLoss   = adjList.some((a: any) => a.type === 'loss');
                 const hasEmpate = adjList.some((a: any) => a.type === 'provider_replenishment');
@@ -761,7 +802,12 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
                         <ShoppingBag size={20} />
                       </div>
                       <div>
-                        <p className="font-black text-gray-800 text-sm">{s.customerName || 'Consumidor Final'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-gray-800 text-sm">{s.customerName || 'Consumidor Final'}</p>
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-mono">
+                            <Hash size={9} />#{s._id.slice(-8).toUpperCase()}
+                          </span>
+                        </div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex flex-wrap items-center gap-1">
                           {(() => { try { return format(parseISO(s.date), 'HH:mm · dd/MM/yy'); } catch { return '—'; } })()}
                           {' · '}{s.items?.length ?? 0} art.
@@ -805,6 +851,18 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
       {selectedSale && (
         <Modal title="Detalle de Venta" onClose={() => { setSelectedSaleId(null); setWarrantyModal(null); }}>
           <div className="space-y-6">
+
+            {/* ID del ticket */}
+            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+              <Hash size={14} className="text-gray-400 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">ID de Ticket</p>
+                <p className="font-mono text-xs font-black text-gray-700 truncate">{selectedSale._id}</p>
+              </div>
+              <span className="ml-auto text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full font-mono flex-shrink-0">
+                #{selectedSale._id.slice(-8).toUpperCase()}
+              </span>
+            </div>
 
             <div className="flex justify-between items-start">
               <div>

@@ -30,6 +30,9 @@
     "vite": "^6.2.0",
     "xlsx": "^0.18.5"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@google/genai", "esbuild", "protobufjs"]
+  },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
