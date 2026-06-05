@@ -692,138 +692,122 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
       </div>
 
-      {/* ── COLUMNA DERECHA: CARRITO ── */}
-      <div className="lg:col-span-2 bg-white rounded-[40px] shadow-2xl border border-gray-100 flex flex-col overflow-hidden min-h-0">
+      {/* ── COLUMNA DERECHA: CARRITO (diseño oscuro POS) ── */}
+      <div className="lg:col-span-2 bg-slate-900 rounded-[32px] shadow-2xl flex flex-col overflow-hidden min-h-0">
 
-        {/* Cabecera compacta */}
-        <div className="px-5 py-3.5 border-b border-gray-100 shrink-0 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
-              <ShoppingCart size={16} />
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-700/60 shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center text-white">
+              <ShoppingCart size={17} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-gray-800 tracking-tighter leading-none">Carrito</h3>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">
-                {cart.length} art. · {cart.reduce((a, i) => a + i.quantity, 0)} u.
+              <h3 className="text-base font-black text-white tracking-tight leading-none">Pedido</h3>
+              <p className="text-[10px] font-bold text-slate-400 leading-none mt-0.5 uppercase tracking-widest">
+                {cart.length} ítem{cart.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
           {cart.length > 0 && (
-            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
-              Gs. {subtotal.toLocaleString()}
-            </span>
+            <button onClick={() => { setCart([]); setErrorMsg(''); }}
+              className="text-[10px] font-black text-slate-500 hover:text-red-400 transition-colors cursor-pointer uppercase tracking-widest">
+              Limpiar
+            </button>
           )}
         </div>
 
-        {/* Items — flex-1 min-h-0: toma el espacio disponible y scrollea */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+        {/* ── LISTA DE ITEMS ── flex-1 scrolleable */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-gray-300 space-y-3 py-10 h-full">
-              <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center">
-                <ShoppingCart size={28} className="text-gray-300" />
+            <div className="flex flex-col items-center justify-center h-full gap-3 py-12">
+              <div className="w-16 h-16 bg-slate-800 rounded-3xl flex items-center justify-center">
+                <ShoppingCart size={26} className="text-slate-600" />
               </div>
-              <p className="font-black text-xs uppercase tracking-widest text-gray-300">Carrito Vacío</p>
+              <p className="text-slate-500 font-black text-xs uppercase tracking-widest">Sin ítems</p>
+              <p className="text-slate-600 font-bold text-[10px]">Seleccioná productos o reparaciones</p>
             </div>
           ) : (
-            cart.map((item, idx) => (
-              <div key={item.id}
-                className={cn(
-                  'relative rounded-2xl border overflow-hidden transition-all',
-                  item.type === 'product'
-                    ? 'bg-white border-indigo-100 hover:border-indigo-300 hover:shadow-md'
-                    : 'bg-amber-50 border-amber-200 hover:border-amber-300 hover:shadow-md'
-                )}>
+            cart.map(item => (
+              <div key={item.id} className="bg-slate-800 rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-slate-750 transition-colors group">
 
-                {/* Acento de color izquierdo */}
+                {/* Ícono tipo */}
                 <div className={cn(
-                  'absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl',
-                  item.type === 'product' ? 'bg-indigo-500' : 'bg-amber-500'
-                )} />
+                  'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white',
+                  item.type === 'product' ? 'bg-indigo-500/80' : 'bg-amber-500/80'
+                )}>
+                  {item.type === 'product' ? <Package size={17} /> : <Wrench size={17} />}
+                </div>
 
-                <div className="flex items-center gap-3 pl-4 pr-3 py-3">
-                  {/* Ícono */}
-                  <div className={cn(
-                    'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
-                    item.type === 'product' ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-200 text-amber-700'
-                  )}>
-                    {item.type === 'product' ? <Package size={16} /> : <Wrench size={16} />}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-black text-gray-800 text-sm truncate leading-tight">{item.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                {/* Nombre + precio unitario */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-white text-sm truncate leading-snug">{item.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] font-bold text-slate-400">
+                      Gs. {n(item.price).toLocaleString()} c/u
+                    </span>
+                    {item.priceType && item.priceType !== 'normal' && (
                       <span className={cn(
-                        'text-[10px] font-bold',
-                        item.type === 'product' ? 'text-indigo-400' : 'text-amber-500'
+                        'text-[9px] font-black px-1.5 py-0.5 rounded-full',
+                        item.priceType === 'wholesale' ? 'bg-purple-500/20 text-purple-300' : 'bg-orange-500/20 text-orange-300'
                       )}>
-                        Gs. {n(item.price).toLocaleString()} c/u
+                        {item.priceType === 'wholesale' ? 'Mayor.' : 'Econ.'}
                       </span>
-                      {item.priceType && item.priceType !== 'normal' && (
-                        <span className={cn(
-                          'text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none',
-                          item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'
-                        )}>
-                          {item.priceType === 'wholesale' ? 'MAYOR.' : 'ECON.'}
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
+                </div>
 
-                  {/* Controles cantidad */}
-                  {item.type === 'product' ? (
-                    <div className="flex items-center gap-1 shrink-0 bg-gray-100 rounded-xl p-0.5">
-                      <button onClick={() => changeQty(item.id, -1)}
-                        className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm cursor-pointer">
-                        <Minus size={11} />
-                      </button>
-                      <span className="w-7 text-center font-black text-gray-800 text-sm">{item.quantity}</span>
-                      <button onClick={() => changeQty(item.id, 1)}
-                        className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm cursor-pointer">
-                        <Plus size={11} />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-lg shrink-0">
-                      Servicio
-                    </span>
-                  )}
-
-                  {/* Subtotal + eliminar */}
-                  <div className="flex flex-col items-end gap-1 shrink-0 ml-1">
-                    <span className={cn(
-                      'font-black text-sm leading-none',
-                      item.type === 'product' ? 'text-indigo-600' : 'text-amber-600'
-                    )}>
-                      Gs. {(n(item.price) * item.quantity).toLocaleString()}
-                    </span>
-                    <button onClick={() => removeItem(item.id)}
-                      className="text-gray-300 hover:text-red-500 transition-colors cursor-pointer">
-                      <Trash2 size={11} />
+                {/* Cantidad (solo productos) */}
+                {item.type === 'product' ? (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => changeQty(item.id, -1)}
+                      className="w-7 h-7 bg-slate-700 hover:bg-red-500/30 hover:text-red-400 text-slate-400 rounded-lg flex items-center justify-center transition-all cursor-pointer">
+                      <Minus size={12} />
+                    </button>
+                    <span className="w-6 text-center font-black text-white text-sm">{item.quantity}</span>
+                    <button onClick={() => changeQty(item.id, 1)}
+                      className="w-7 h-7 bg-slate-700 hover:bg-indigo-500/30 hover:text-indigo-400 text-slate-400 rounded-lg flex items-center justify-center transition-all cursor-pointer">
+                      <Plus size={12} />
                     </button>
                   </div>
+                ) : (
+                  <span className="text-[10px] font-black text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg shrink-0">
+                    ×1
+                  </span>
+                )}
+
+                {/* Subtotal */}
+                <div className="text-right shrink-0 min-w-[72px]">
+                  <p className="font-black text-emerald-400 text-sm leading-none">
+                    Gs. {(n(item.price) * item.quantity).toLocaleString()}
+                  </p>
+                  <button onClick={() => removeItem(item.id)}
+                    className="text-slate-600 hover:text-red-400 transition-colors mt-1 cursor-pointer">
+                    <Trash2 size={12} />
+                  </button>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {/* ── PANEL DE COBRO — shrink-0: nunca se achica, siempre visible ── */}
-        <div className="shrink-0 border-t border-gray-100 flex flex-col">
+        {/* ── PANEL DE COBRO — shrink-0, nunca desaparece ── */}
+        <div className="shrink-0 border-t border-slate-700/60 flex flex-col bg-slate-800/50">
 
-          {/* Scrollable: total + campos + pagos */}
-          <div className="overflow-y-auto p-4 space-y-3 max-h-[340px] lg:max-h-[380px]">
+          {/* Scrollable interno: campos + pagos */}
+          <div className="overflow-y-auto px-4 py-3 space-y-3 max-h-[310px] lg:max-h-[350px]">
 
-            {/* TOTAL */}
-            <div className="bg-indigo-600 rounded-2xl px-4 py-3 flex items-center justify-between">
+            {/* Total grande */}
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-[9px] font-black text-indigo-200 uppercase tracking-widest">Total a Cobrar</p>
-                <p className="text-2xl font-black text-white tracking-tighter">Gs. {total.toLocaleString()}</p>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Total</p>
+                <p className="text-3xl font-black text-white tracking-tighter leading-none">
+                  Gs. {total.toLocaleString()}
+                </p>
               </div>
               {discountN > 0 && (
                 <div className="text-right">
-                  <p className="text-[9px] text-indigo-300 font-bold">Sub: Gs. {subtotal.toLocaleString()}</p>
-                  <p className="text-[9px] text-red-300 font-bold">-Gs. {discountN.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-500 font-bold line-through">Gs. {subtotal.toLocaleString()}</p>
+                  <p className="text-[10px] text-red-400 font-black">−Gs. {discountN.toLocaleString()}</p>
                 </div>
               )}
             </div>
@@ -831,26 +815,26 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
             {/* Cliente + Descuento */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Cliente</label>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Cliente</label>
                 <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
                   placeholder="Consumidor Final"
-                  className="w-full bg-white border border-gray-200 rounded-xl py-1.5 px-2.5 outline-none font-bold text-xs focus:border-indigo-400 transition-colors" />
+                  className="w-full bg-slate-700 border border-slate-600 rounded-xl py-2 px-3 outline-none font-bold text-xs text-white placeholder-slate-500 focus:border-indigo-500 transition-colors" />
               </div>
               <div>
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Descuento (Gs.)</label>
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Descuento</label>
                 <div className="relative">
-                  <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={10} />
+                  <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" size={10} />
                   <NumericInput value={discount} onChange={raw => setDiscount(raw)}
-                    className="w-full bg-white border border-gray-200 rounded-xl py-1.5 pl-6 pr-2 outline-none font-bold text-xs focus:border-indigo-400 transition-colors" />
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl py-2 pl-7 pr-2 outline-none font-bold text-xs text-white focus:border-indigo-500 transition-colors" />
                 </div>
               </div>
             </div>
 
             {/* Mayorista */}
             <div>
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Mayorista (opcional)</label>
+              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Mayorista</label>
               <select value={wholesalerId} onChange={e => setWholesalerId(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-xl py-1.5 px-2.5 outline-none font-bold text-xs focus:border-indigo-400 cursor-pointer transition-colors">
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl py-2 px-3 outline-none font-bold text-xs text-white focus:border-indigo-500 cursor-pointer transition-colors">
                 <option value="">— Consumidor Final —</option>
                 {wholesalers.map(w => (
                   <option key={w._id} value={w._id}>
@@ -860,19 +844,19 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
               </select>
             </div>
 
-            {/* ── PAGOS PARCIALES ── */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-3 space-y-2">
+            {/* Pagos */}
+            <div className="bg-slate-700/50 rounded-2xl p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Forma{payments.length !== 1 ? 's' : ''} de Pago</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Forma de Pago</p>
                 <button onClick={addPaymentRow}
-                  className="bg-indigo-600 text-white font-black text-[9px] px-2.5 py-1 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1 cursor-pointer">
+                  className="bg-indigo-500 text-white font-black text-[9px] px-2.5 py-1 rounded-lg hover:bg-indigo-400 transition-colors flex items-center gap-1 cursor-pointer">
                   <Plus size={9} /> Agregar
                 </button>
               </div>
               {payments.map((p, idx) => (
                 <div key={idx} className="flex gap-1.5 items-center">
                   <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-2 text-xs font-bold outline-none focus:border-indigo-400 cursor-pointer">
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-xl py-2 px-2 text-xs font-bold text-white outline-none focus:border-indigo-500 cursor-pointer">
                     <option value="cash">Efectivo</option>
                     <option value="credit_card">T. Crédito</option>
                     <option value="debit_card">T. Débito</option>
@@ -882,41 +866,43 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                   </select>
                   <NumericInput value={p.amount} placeholder="Monto"
                     onChange={raw => updatePayment(idx, 'amount', raw)}
-                    className="w-24 bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-2 text-sm font-black outline-none text-center focus:border-indigo-400" />
+                    className="w-24 bg-slate-700 border border-slate-600 rounded-xl py-2 px-2 text-sm font-black text-white outline-none text-center focus:border-indigo-500" />
                   {payments.length > 1 && (
                     <button onClick={() => removePaymentRow(idx)}
-                      className="text-gray-300 hover:text-red-500 p-1 shrink-0 transition-colors cursor-pointer">
+                      className="text-slate-600 hover:text-red-400 p-1 shrink-0 transition-colors cursor-pointer">
                       <Trash2 size={12} />
                     </button>
                   )}
                 </div>
               ))}
               {total > 0 && (
-                <div className="pt-2 border-t border-gray-100 space-y-1">
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className={cn('h-1.5 rounded-full transition-all', totalPaid >= total ? 'bg-emerald-500' : 'bg-indigo-400')}
+                <div className="pt-2 border-t border-slate-600 space-y-1.5">
+                  <div className="w-full bg-slate-600 rounded-full h-1.5">
+                    <div className={cn('h-1.5 rounded-full transition-all duration-300', totalPaid >= total ? 'bg-emerald-500' : 'bg-indigo-500')}
                       style={{ width: `${Math.min(100, (totalPaid / total) * 100)}%` }} />
                   </div>
                   <div className="flex justify-between text-[10px] font-black">
-                    <span className="text-gray-400">Gs. {totalPaid.toLocaleString()}</span>
-                    {resta > 0 && <span className="text-amber-600">Falta Gs. {resta.toLocaleString()}</span>}
-                    {vuelto > 0 && <span className="text-emerald-600">Vuelto Gs. {vuelto.toLocaleString()}</span>}
-                    {totalPaid === total && total > 0 && <span className="text-emerald-600 flex items-center gap-1"><CheckCircle size={9} /> Completo</span>}
+                    <span className="text-slate-500">Gs. {totalPaid.toLocaleString()}</span>
+                    {resta > 0 && <span className="text-amber-400">Falta Gs. {resta.toLocaleString()}</span>}
+                    {vuelto > 0 && <span className="text-emerald-400">Vuelto Gs. {vuelto.toLocaleString()}</span>}
+                    {totalPaid === total && total > 0 && (
+                      <span className="text-emerald-400 flex items-center gap-1"><CheckCircle size={9} /> Completo</span>
+                    )}
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* BOTÓN FINALIZAR — siempre visible, fuera del scroll */}
-          <div className="p-4 pt-2 shrink-0">
+          {/* BOTÓN FINALIZAR — fijo siempre al fondo */}
+          <div className="px-4 pb-4 pt-2 shrink-0">
             <button
               onClick={checkout}
               disabled={cart.length === 0 || isProcessing || totalPaid !== total || total === 0}
-              className="w-full bg-indigo-600 text-white font-black py-3.5 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed text-sm cursor-pointer">
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 disabled:opacity-30 disabled:shadow-none disabled:cursor-not-allowed text-sm cursor-pointer">
               {isProcessing
                 ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
-                : <><CheckCircle size={16} /> Finalizar Venta · Gs. {total.toLocaleString()}</>
+                : <><CheckCircle size={18} /> Cobrar · Gs. {total.toLocaleString()}</>
               }
             </button>
           </div>
