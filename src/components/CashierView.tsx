@@ -716,54 +716,93 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
 
         {/* Items — flex-1 min-h-0: toma el espacio disponible y scrollea */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-gray-300 space-y-2 py-8 h-full">
-              <ShoppingCart size={32} />
-              <p className="font-black text-xs uppercase tracking-widest">Carrito Vacío</p>
+            <div className="flex flex-col items-center justify-center text-gray-300 space-y-3 py-10 h-full">
+              <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center">
+                <ShoppingCart size={28} className="text-gray-300" />
+              </div>
+              <p className="font-black text-xs uppercase tracking-widest text-gray-300">Carrito Vacío</p>
             </div>
           ) : (
-            cart.map(item => (
-              <div key={item.id} className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors">
-                <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0',
-                  item.type === 'product' ? 'bg-indigo-500' : 'bg-amber-500')}>
-                  {item.type === 'product' ? <Package size={13} /> : <Wrench size={13} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-800 text-xs truncate leading-tight">{item.name}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <p className="text-[9px] font-black text-gray-400">Gs. {n(item.price).toLocaleString()}</p>
-                    {item.priceType && item.priceType !== 'normal' && (
-                      <span className={cn('text-[8px] font-black px-1 py-0.5 rounded leading-none',
-                        item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600')}>
-                        {item.priceType === 'wholesale' ? 'May.' : 'Tac.'}
+            cart.map((item, idx) => (
+              <div key={item.id}
+                className={cn(
+                  'relative rounded-2xl border overflow-hidden transition-all',
+                  item.type === 'product'
+                    ? 'bg-white border-indigo-100 hover:border-indigo-300 hover:shadow-md'
+                    : 'bg-amber-50 border-amber-200 hover:border-amber-300 hover:shadow-md'
+                )}>
+
+                {/* Acento de color izquierdo */}
+                <div className={cn(
+                  'absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl',
+                  item.type === 'product' ? 'bg-indigo-500' : 'bg-amber-500'
+                )} />
+
+                <div className="flex items-center gap-3 pl-4 pr-3 py-3">
+                  {/* Ícono */}
+                  <div className={cn(
+                    'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
+                    item.type === 'product' ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-200 text-amber-700'
+                  )}>
+                    {item.type === 'product' ? <Package size={16} /> : <Wrench size={16} />}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-gray-800 text-sm truncate leading-tight">{item.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className={cn(
+                        'text-[10px] font-bold',
+                        item.type === 'product' ? 'text-indigo-400' : 'text-amber-500'
+                      )}>
+                        Gs. {n(item.price).toLocaleString()} c/u
                       </span>
-                    )}
+                      {item.priceType && item.priceType !== 'normal' && (
+                        <span className={cn(
+                          'text-[8px] font-black px-1.5 py-0.5 rounded-full leading-none',
+                          item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'
+                        )}>
+                          {item.priceType === 'wholesale' ? 'MAYOR.' : 'ECON.'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Controles cantidad */}
+                  {item.type === 'product' ? (
+                    <div className="flex items-center gap-1 shrink-0 bg-gray-100 rounded-xl p-0.5">
+                      <button onClick={() => changeQty(item.id, -1)}
+                        className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm cursor-pointer">
+                        <Minus size={11} />
+                      </button>
+                      <span className="w-7 text-center font-black text-gray-800 text-sm">{item.quantity}</span>
+                      <button onClick={() => changeQty(item.id, 1)}
+                        className="w-7 h-7 bg-white rounded-lg flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm cursor-pointer">
+                        <Plus size={11} />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-lg shrink-0">
+                      Servicio
+                    </span>
+                  )}
+
+                  {/* Subtotal + eliminar */}
+                  <div className="flex flex-col items-end gap-1 shrink-0 ml-1">
+                    <span className={cn(
+                      'font-black text-sm leading-none',
+                      item.type === 'product' ? 'text-indigo-600' : 'text-amber-600'
+                    )}>
+                      Gs. {(n(item.price) * item.quantity).toLocaleString()}
+                    </span>
+                    <button onClick={() => removeItem(item.id)}
+                      className="text-gray-300 hover:text-red-500 transition-colors cursor-pointer">
+                      <Trash2 size={11} />
+                    </button>
                   </div>
                 </div>
-                {item.type === 'product' && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => changeQty(item.id, -1)}
-                      className="w-5 h-5 bg-gray-200 hover:bg-red-100 hover:text-red-600 rounded-md flex items-center justify-center transition-colors cursor-pointer">
-                      <Minus size={9} />
-                    </button>
-                    <span className="w-6 text-center font-black text-gray-800 text-xs">{item.quantity}</span>
-                    <button onClick={() => changeQty(item.id, 1)}
-                      className="w-5 h-5 bg-gray-200 hover:bg-indigo-100 hover:text-indigo-600 rounded-md flex items-center justify-center transition-colors cursor-pointer">
-                      <Plus size={9} />
-                    </button>
-                  </div>
-                )}
-                {item.type === 'repair' && (
-                  <span className="text-[9px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">×1</span>
-                )}
-                <span className="font-black text-gray-700 text-[10px] w-16 text-right shrink-0">
-                  Gs. {(n(item.price) * item.quantity).toLocaleString()}
-                </span>
-                <button onClick={() => removeItem(item.id)}
-                  className="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0 cursor-pointer">
-                  <Trash2 size={12} />
-                </button>
               </div>
             ))
           )}
