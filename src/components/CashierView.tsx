@@ -502,22 +502,22 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
 
         <div className="flex gap-2 shrink-0">
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input type="text" placeholder="Buscar producto o reparación..." value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setSelectedProduct(null); setSelectedRepair(null); setErrorMsg(''); }}
-              className="w-full bg-white border border-gray-100 rounded-[20px] py-3.5 pl-12 pr-4 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700 text-sm" />
+              className="w-full bg-white border border-gray-100 rounded-2xl py-2.5 pl-9 pr-3 outline-none shadow-sm focus:shadow-md focus:border-indigo-200 transition-all font-bold text-gray-700 text-sm" />
           </div>
-          <div className="relative w-16 md:w-24 shrink-0">
+          <div className="relative w-14 md:w-20 shrink-0">
             <NumericInput value={qty} placeholder="1"
               onChange={raw => setQty(raw)}
-              className="w-full bg-white border border-gray-100 rounded-[20px] py-3.5 px-2 outline-none shadow-sm font-bold text-gray-700 text-center text-sm" />
+              className="w-full bg-white border border-gray-100 rounded-2xl py-2.5 px-2 outline-none shadow-sm font-bold text-gray-700 text-center text-sm" />
             <label className="absolute -top-2 left-2 bg-white px-1 text-[9px] font-black text-gray-400 uppercase tracking-widest">Cant.</label>
           </div>
           <button
             onClick={() => { if (selectedProduct) addProduct(); else if (selectedRepair) addRepair(); }}
             disabled={!selectedProduct && !selectedRepair}
-            className="bg-indigo-600 text-white font-black px-4 md:px-6 py-3.5 rounded-[20px] hover:bg-indigo-700 disabled:opacity-40 flex items-center gap-1.5 shadow-lg shadow-indigo-200 shrink-0 transition-all text-sm">
-            <Plus size={16} /> <span className="hidden sm:inline">{selectedRepair && !selectedProduct ? 'Agregar reparación' : 'Agregar'}</span>
+            className="bg-indigo-600 text-white font-black px-4 md:px-5 py-2.5 rounded-2xl hover:bg-indigo-700 disabled:opacity-40 flex items-center gap-1.5 shadow-lg shadow-indigo-200 shrink-0 transition-all text-sm">
+            <Plus size={16} /> <span className="hidden sm:inline">{selectedRepair && !selectedProduct ? 'Agregar' : 'Agregar'}</span>
             <span className="sm:hidden">+</span>
           </button>
         </div>
@@ -693,46 +693,50 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
       </div>
 
       {/* ── COLUMNA DERECHA: CARRITO ── */}
-      {/* Altura fija con flex para que el botón finalizar nunca se pierda */}
       <div className="lg:col-span-2 bg-white rounded-[40px] shadow-2xl border border-gray-100 flex flex-col overflow-hidden min-h-0">
 
-        {/* Cabecera */}
-        <div className="p-6 border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-              <ShoppingCart size={20} />
+        {/* Cabecera compacta */}
+        <div className="px-5 py-3.5 border-b border-gray-100 shrink-0 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
+              <ShoppingCart size={16} />
             </div>
-            <h3 className="text-2xl font-black text-gray-800 tracking-tighter">Carrito</h3>
+            <div>
+              <h3 className="text-lg font-black text-gray-800 tracking-tighter leading-none">Carrito</h3>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">
+                {cart.length} art. · {cart.reduce((a, i) => a + i.quantity, 0)} u.
+              </p>
+            </div>
           </div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-            {cart.length} artículo{cart.length !== 1 ? 's' : ''} · {cart.reduce((a, i) => a + i.quantity, 0)} unidad{cart.reduce((a, i) => a + i.quantity, 0) !== 1 ? 'es' : ''}
-          </p>
+          {cart.length > 0 && (
+            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+              Gs. {subtotal.toLocaleString()}
+            </span>
+          )}
         </div>
 
-        {/* Items — scroll independiente */}
-        <div className="overflow-y-auto p-4 space-y-2 max-h-48 lg:max-h-56">
+        {/* Items — flex-1 min-h-0: toma el espacio disponible y scrollea */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1.5">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-gray-300 space-y-2 py-6">
-              <ShoppingCart size={36} />
-              <p className="font-black text-sm uppercase tracking-widest">Carrito Vacío</p>
+            <div className="flex flex-col items-center justify-center text-gray-300 space-y-2 py-8 h-full">
+              <ShoppingCart size={32} />
+              <p className="font-black text-xs uppercase tracking-widest">Carrito Vacío</p>
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.id} className="flex items-center gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0',
+              <div key={item.id} className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors">
+                <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0',
                   item.type === 'product' ? 'bg-indigo-500' : 'bg-amber-500')}>
-                  {item.type === 'product' ? <Package size={14} /> : <Wrench size={14} />}
+                  {item.type === 'product' ? <Package size={13} /> : <Wrench size={13} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-800 text-xs truncate">{item.name}</p>
+                  <p className="font-bold text-gray-800 text-xs truncate leading-tight">{item.name}</p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <p className="text-[9px] font-black text-gray-400 uppercase">Gs. {n(item.price).toLocaleString()} c/u</p>
+                    <p className="text-[9px] font-black text-gray-400">Gs. {n(item.price).toLocaleString()}</p>
                     {item.priceType && item.priceType !== 'normal' && (
-                      <span className={cn(
-                        'text-[8px] font-black px-1.5 py-0.5 rounded-lg leading-none',
-                        item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'
-                      )}>
-                        {item.priceType === 'wholesale' ? '🏪 May.' : '💸 Tac.'}
+                      <span className={cn('text-[8px] font-black px-1 py-0.5 rounded leading-none',
+                        item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600')}>
+                        {item.priceType === 'wholesale' ? 'May.' : 'Tac.'}
                       </span>
                     )}
                   </div>
@@ -740,148 +744,143 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                 {item.type === 'product' && (
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => changeQty(item.id, -1)}
-                      className="w-6 h-6 bg-gray-200 hover:bg-red-100 hover:text-red-600 rounded-lg flex items-center justify-center transition-colors">
-                      <Minus size={10} />
+                      className="w-5 h-5 bg-gray-200 hover:bg-red-100 hover:text-red-600 rounded-md flex items-center justify-center transition-colors cursor-pointer">
+                      <Minus size={9} />
                     </button>
-                    <span className="w-7 text-center font-black text-gray-800 text-sm">{item.quantity}</span>
+                    <span className="w-6 text-center font-black text-gray-800 text-xs">{item.quantity}</span>
                     <button onClick={() => changeQty(item.id, 1)}
-                      className="w-6 h-6 bg-gray-200 hover:bg-indigo-100 hover:text-indigo-600 rounded-lg flex items-center justify-center transition-colors">
-                      <Plus size={10} />
+                      className="w-5 h-5 bg-gray-200 hover:bg-indigo-100 hover:text-indigo-600 rounded-md flex items-center justify-center transition-colors cursor-pointer">
+                      <Plus size={9} />
                     </button>
                   </div>
                 )}
                 {item.type === 'repair' && (
-                  <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-0.5 rounded-lg">x1</span>
+                  <span className="text-[9px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">×1</span>
                 )}
-                <span className="font-black text-gray-800 text-xs w-20 text-right shrink-0">
+                <span className="font-black text-gray-700 text-[10px] w-16 text-right shrink-0">
                   Gs. {(n(item.price) * item.quantity).toLocaleString()}
                 </span>
-                <button onClick={() => removeItem(item.id)} className="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0">
-                  <Trash2 size={13} />
+                <button onClick={() => removeItem(item.id)}
+                  className="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0 cursor-pointer">
+                  <Trash2 size={12} />
                 </button>
               </div>
             ))
           )}
         </div>
 
-        {/* ── PANEL DE COBRO — siempre visible abajo ── */}
-        <div className="p-4 border-t border-gray-100 space-y-3 shrink-0 bg-gray-50/50 overflow-y-auto flex-1">
+        {/* ── PANEL DE COBRO — shrink-0: nunca se achica, siempre visible ── */}
+        <div className="shrink-0 border-t border-gray-100 flex flex-col">
 
-          {/* TOTAL */}
-          <div className="bg-indigo-600 rounded-2xl px-4 py-3 flex items-center justify-between">
-            <div>
-              <p className="text-[9px] font-black text-indigo-200 uppercase tracking-widest">Total a Cobrar</p>
-              <p className="text-3xl font-black text-white tracking-tighter">Gs. {total.toLocaleString()}</p>
-            </div>
-            {discountN > 0 && (
-              <div className="text-right">
-                <p className="text-[9px] text-indigo-300 font-bold">Sub: Gs. {subtotal.toLocaleString()}</p>
-                <p className="text-[9px] text-indigo-300 font-bold">Desc: -Gs. {discountN.toLocaleString()}</p>
+          {/* Scrollable: total + campos + pagos */}
+          <div className="overflow-y-auto p-4 space-y-3 max-h-[340px] lg:max-h-[380px]">
+
+            {/* TOTAL */}
+            <div className="bg-indigo-600 rounded-2xl px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-[9px] font-black text-indigo-200 uppercase tracking-widest">Total a Cobrar</p>
+                <p className="text-2xl font-black text-white tracking-tighter">Gs. {total.toLocaleString()}</p>
               </div>
-            )}
-          </div>
-
-          {/* Cliente + Descuento */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Cliente</label>
-              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
-                placeholder="Consumidor Final"
-                className="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 outline-none font-bold text-xs focus:border-indigo-400" />
+              {discountN > 0 && (
+                <div className="text-right">
+                  <p className="text-[9px] text-indigo-300 font-bold">Sub: Gs. {subtotal.toLocaleString()}</p>
+                  <p className="text-[9px] text-red-300 font-bold">-Gs. {discountN.toLocaleString()}</p>
+                </div>
+              )}
             </div>
-            <div>
-              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Descuento (Gs.)</label>
-              <div className="relative">
-                <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={11} />
-                <NumericInput value={discount}
-                  onChange={raw => setDiscount(raw)}
-                  className="w-full bg-white border border-gray-200 rounded-xl py-2 pl-6 pr-2 outline-none font-bold text-xs focus:border-indigo-400" />
+
+            {/* Cliente + Descuento */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Cliente</label>
+                <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Consumidor Final"
+                  className="w-full bg-white border border-gray-200 rounded-xl py-1.5 px-2.5 outline-none font-bold text-xs focus:border-indigo-400 transition-colors" />
+              </div>
+              <div>
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Descuento (Gs.)</label>
+                <div className="relative">
+                  <Tag className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={10} />
+                  <NumericInput value={discount} onChange={raw => setDiscount(raw)}
+                    className="w-full bg-white border border-gray-200 rounded-xl py-1.5 pl-6 pr-2 outline-none font-bold text-xs focus:border-indigo-400 transition-colors" />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Mayorista */}
-          <div>
-            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Mayorista (opcional)</label>
-            <select value={wholesalerId} onChange={e => setWholesalerId(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 outline-none font-bold text-xs focus:border-indigo-400">
-              <option value="">— Consumidor Final —</option>
-              {wholesalers.map(w => (
-                <option key={w._id} value={w._id}>
-                  {w.name}{n(w.debt) > 0 ? ` · Deuda: Gs. ${n(w.debt).toLocaleString()}` : ''}
-                </option>
+            {/* Mayorista */}
+            <div>
+              <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1 block mb-1">Mayorista (opcional)</label>
+              <select value={wholesalerId} onChange={e => setWholesalerId(e.target.value)}
+                className="w-full bg-white border border-gray-200 rounded-xl py-1.5 px-2.5 outline-none font-bold text-xs focus:border-indigo-400 cursor-pointer transition-colors">
+                <option value="">— Consumidor Final —</option>
+                {wholesalers.map(w => (
+                  <option key={w._id} value={w._id}>
+                    {w.name}{n(w.debt) > 0 ? ` · Deuda: Gs. ${n(w.debt).toLocaleString()}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* ── PAGOS PARCIALES ── */}
+            <div className="bg-white border border-gray-200 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Forma{payments.length !== 1 ? 's' : ''} de Pago</p>
+                <button onClick={addPaymentRow}
+                  className="bg-indigo-600 text-white font-black text-[9px] px-2.5 py-1 rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1 cursor-pointer">
+                  <Plus size={9} /> Agregar
+                </button>
+              </div>
+              {payments.map((p, idx) => (
+                <div key={idx} className="flex gap-1.5 items-center">
+                  <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-2 text-xs font-bold outline-none focus:border-indigo-400 cursor-pointer">
+                    <option value="cash">Efectivo</option>
+                    <option value="credit_card">T. Crédito</option>
+                    <option value="debit_card">T. Débito</option>
+                    <option value="transfer">Transferencia</option>
+                    <option value="qr">QR</option>
+                    <option value="credit">Cta. May.</option>
+                  </select>
+                  <NumericInput value={p.amount} placeholder="Monto"
+                    onChange={raw => updatePayment(idx, 'amount', raw)}
+                    className="w-24 bg-gray-50 border border-gray-200 rounded-xl py-1.5 px-2 text-sm font-black outline-none text-center focus:border-indigo-400" />
+                  {payments.length > 1 && (
+                    <button onClick={() => removePaymentRow(idx)}
+                      className="text-gray-300 hover:text-red-500 p-1 shrink-0 transition-colors cursor-pointer">
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
               ))}
-            </select>
-          </div>
-
-          {/* ── PAGOS PARCIALES ── */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Forma{payments.length !== 1 ? 's' : ''} de Pago</p>
-              <button onClick={addPaymentRow}
-                className="bg-indigo-600 text-white font-black text-[9px] px-3 py-1 rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1">
-                <Plus size={10} /> Agregar pago
-              </button>
+              {total > 0 && (
+                <div className="pt-2 border-t border-gray-100 space-y-1">
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className={cn('h-1.5 rounded-full transition-all', totalPaid >= total ? 'bg-emerald-500' : 'bg-indigo-400')}
+                      style={{ width: `${Math.min(100, (totalPaid / total) * 100)}%` }} />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-black">
+                    <span className="text-gray-400">Gs. {totalPaid.toLocaleString()}</span>
+                    {resta > 0 && <span className="text-amber-600">Falta Gs. {resta.toLocaleString()}</span>}
+                    {vuelto > 0 && <span className="text-emerald-600">Vuelto Gs. {vuelto.toLocaleString()}</span>}
+                    {totalPaid === total && total > 0 && <span className="text-emerald-600 flex items-center gap-1"><CheckCircle size={9} /> Completo</span>}
+                  </div>
+                </div>
+              )}
             </div>
-
-            {payments.map((p, idx) => (
-              <div key={idx} className="flex gap-2 items-center">
-                {/* Select método */}
-                <select
-                  value={p.method}
-                  onChange={e => updatePayment(idx, 'method', e.target.value)}
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold outline-none focus:border-indigo-400">
-                  <option value="cash">💵 Efectivo</option>
-                  <option value="credit_card">💳 T. Crédito</option>
-                  <option value="debit_card">💳 T. Débito</option>
-                  <option value="transfer">🏦 Transferencia</option>
-                  <option value="qr">📱 QR</option>
-                  <option value="credit">📒 Cta. May.</option>
-                </select>
-                {/* Input monto */}
-                <NumericInput
-                  value={p.amount}
-                  placeholder="Monto"
-                  onChange={raw => updatePayment(idx, 'amount', raw)}
-                  className="w-28 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black outline-none text-center focus:border-indigo-400" />
-                {/* Eliminar fila — solo si hay más de 1 */}
-                {payments.length > 1 && (
-                  <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 p-1 shrink-0 transition-colors">
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {/* Barra de progreso del pago */}
-            {total > 0 && (
-              <div className="pt-2 border-t border-gray-100 space-y-1">
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className={cn('h-2 rounded-full transition-all', totalPaid >= total ? 'bg-emerald-500' : 'bg-indigo-400')}
-                    style={{ width: `${Math.min(100, (totalPaid / total) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] font-black">
-                  <span className="text-gray-400">Pagado: Gs. {totalPaid.toLocaleString()}</span>
-                  {resta > 0 && <span className="text-amber-600">Falta: Gs. {resta.toLocaleString()}</span>}
-                  {vuelto > 0 && <span className="text-emerald-600">Vuelto: Gs. {vuelto.toLocaleString()}</span>}
-                  {totalPaid === total && total > 0 && <span className="text-emerald-600 flex items-center gap-1"><CheckCircle size={10} /> Completo</span>}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* BOTÓN FINALIZAR */}
-          <button
-            onClick={checkout}
-            disabled={cart.length === 0 || isProcessing || totalPaid !== total || total === 0}
-            className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed text-sm">
-            {isProcessing
-              ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
-              : <><Printer size={16} /><ArrowRight size={16} /> Finalizar Venta</>
-            }
-          </button>
+          {/* BOTÓN FINALIZAR — siempre visible, fuera del scroll */}
+          <div className="p-4 pt-2 shrink-0">
+            <button
+              onClick={checkout}
+              disabled={cart.length === 0 || isProcessing || totalPaid !== total || total === 0}
+              className="w-full bg-indigo-600 text-white font-black py-3.5 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed text-sm cursor-pointer">
+              {isProcessing
+                ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
+                : <><CheckCircle size={16} /> Finalizar Venta · Gs. {total.toLocaleString()}</>
+              }
+            </button>
+          </div>
         </div>
       </div>
     </div>
