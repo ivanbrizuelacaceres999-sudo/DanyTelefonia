@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus, ShoppingBag, Wallet, ChevronRight, Wrench, Smartphone, Trash2,
   ShieldCheck, ShieldAlert, ShieldX, CheckCircle, X, AlertCircle, RefreshCw,
-  Banknote, ArrowDownLeft, FileDown, Calendar, Loader2, Search, Hash
+  Banknote, ArrowDownLeft, FileDown, Calendar, Loader2, Search, Hash, Package
 } from 'lucide-react';
 import { buildExcel } from '../utils/exportExcel';
 import { api } from '../api';
 import { socket } from '../socket';
-import { Sale, FixedCost, CashSession, UserProfile, ExpenseConfig, CashWithdrawal, WithdrawalMotive } from '../types';
+import { Sale, FixedCost, CashSession, UserProfile, ExpenseConfig, CashWithdrawal, WithdrawalMotive, Product } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { cn } from '../lib/utils';
@@ -18,6 +18,7 @@ interface HistoryViewProps {
   sales?:     Sale[];
   fixedCosts: FixedCost[];
   repairs?:   any[];
+  products?:  Product[];
   user?:      UserProfile;
   onRefresh:  () => void;
 }
@@ -31,7 +32,7 @@ const METHOD_LABELS: Record<string, string> = {
 const fmt = (date: string) => { try { return format(parseISO(date), 'dd/MM/yyyy HH:mm'); } catch { return '—'; } };
 const fmtDate = (date: string) => { try { return format(parseISO(date), 'dd/MM/yyyy'); } catch { return '—'; } };
 
-export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: HistoryViewProps) => {
+export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onRefresh }: HistoryViewProps) => {
   const isAdmin = user?.role === 'admin';
 
   // ── Sub-pestañas ──────────────────────────────────────────
@@ -55,6 +56,9 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
   const [warrantyItem,      setWarrantyItem]       = useState<{id: string; name: string; qty: number; maxQty: number} | null>(null);
   const [applyingWarranty,  setApplyingWarranty]   = useState(false);
   const [warranties,        setWarranties]         = useState<any[]>([]);
+  // Flujo garantía de reparación
+  const [repairWarrantyFlow, setRepairWarrantyFlow] = useState<'labor' | 'part' | null>(null);
+  const [repairWarrantyPart, setRepairWarrantyPart] = useState('');
 
   // ── Retiros de caja ────────────────────────────────────────────
   const [withdrawals,       setWithdrawals]        = useState<CashWithdrawal[]>([]);
@@ -334,6 +338,36 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
   const saleWarranties = selectedSale
     ? warranties.filter(w => String(w.saleId) === String(selectedSale._id))
     : [];
+
+  // ── Detección de garantía de reparación ──────────────────
+  const isRepairWarranty = warrantyModal?.productName?.startsWith('Reparación:') ?? false;
+  const repairWarrantyRepairItem = isRepairWarranty
+    ? (selectedSale?.items || []).find((i: any) => i.type === 'repair')
+    : null;
+  const repairId = (warrantyModal as any)?.productId || repairWarrantyRepairItem?.id || null;
+  const repairRepairData = repairId ? (repairs || []).find((r: any) => r._id === repairId) : null;
+
+  const handleApplyRepairWarranty = async () => {
+    if (!repairId || !repairWarrantyFlow) return;
+    if (repairWarrantyFlow === 'part' && !repairWarrantyPart) return;
+    setApplyingWarranty(true);
+    try {
+      await api.applyRepairWarranty(repairId, {
+        type: repairWarrantyFlow,
+        defectivePart: repairWarrantyFlow === 'part' ? repairWarrantyPart : undefined,
+      });
+      // Marcar la garantía original como usada
+      try { await (api as any).applyWarranty(warrantyModal._id, 'defective'); } catch {}
+      setWarrantyModal(null);
+      setRepairWarrantyFlow(null);
+      setRepairWarrantyPart('');
+      setWarrantyItem(null);
+      onRefresh();
+      loadWarranties();
+    } catch (e: any) {
+      alert('Error al aplicar garantía: ' + (e?.message ?? 'Error desconocido'));
+    } finally { setApplyingWarranty(false); }
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -1126,15 +1160,16 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
         </Modal>
       )}
 
-      {/* Modal aplicar garantía — selector de ítem y cantidad */}
+      {/* Modal aplicar garantía */}
       {warrantyModal && (() => {
-        // Los ítems de la venta que se pueden reclamar (solo productos, no reparaciones)
         const saleItems = (selectedSale?.items || []).filter((i: any) => i.type === 'product');
         const hasMultipleItems = saleItems.length > 1;
         return (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md">
+              className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+
+              {/* Header */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
                   <ShieldAlert size={28} />
@@ -1150,105 +1185,185 @@ export const HistoryView = ({ fixedCosts, repairs = [], user, onRefresh }: Histo
                 </div>
               </div>
 
-              {/* Si hay múltiples productos en la venta, seleccionar cuál */}
-              {hasMultipleItems && !warrantyItem && (
-                <div className="space-y-3 mb-6">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    ¿Cuál producto trae el cliente?
-                  </p>
-                  {saleItems.map((item: any, i: number) => (
-                    <button key={i}
-                      onClick={() => setWarrantyItem({ id: item.id, name: item.name, qty: 1, maxQty: item.quantity || 1 })}
-                      className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50 transition-all text-left">
-                      <div>
-                        <p className="font-black text-gray-800 text-sm">{item.name}</p>
-                        <p className="text-[10px] font-bold text-gray-400">
-                          ×{item.quantity || 1} unidades · Gs. {toNum(item.price).toLocaleString()} c/u
-                        </p>
+              {/* ═══ FLUJO GARANTÍA DE REPARACIÓN ═══ */}
+              {isRepairWarranty ? (
+                <div className="space-y-4 mb-6">
+
+                  {/* Paso 1: elegir tipo */}
+                  {!repairWarrantyFlow && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">¿Por qué vuelve?</p>
+                      <button onClick={() => setRepairWarrantyFlow('labor')}
+                        className="w-full flex items-start gap-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl hover:border-amber-400 transition-all text-left">
+                        <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">
+                          <Wrench size={20} />
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-800">El problema volvió</p>
+                          <p className="text-[10px] font-bold text-gray-500 mt-0.5">Falla de mano de obra. Se reabre sin costo.</p>
+                        </div>
+                      </button>
+                      <button onClick={() => setRepairWarrantyFlow('part')}
+                        className="w-full flex items-start gap-4 p-4 bg-red-50 border-2 border-red-200 rounded-2xl hover:border-red-400 transition-all text-left">
+                        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 flex-shrink-0">
+                          <Package size={20} />
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-800">Un repuesto falló</p>
+                          <p className="text-[10px] font-bold text-gray-500 mt-0.5">Seleccionás el repuesto defectuoso.</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Paso 2a: mano de obra */}
+                  {repairWarrantyFlow === 'labor' && (
+                    <div className="space-y-3">
+                      <button onClick={() => setRepairWarrantyFlow(null)}
+                        className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">← Cambiar</button>
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                        <p className="font-black text-amber-700 text-sm">Se creará una nueva reparación:</p>
+                        <ul className="mt-2 space-y-1 text-[11px] font-bold text-amber-600">
+                          <li>• Mismo cliente y equipo</li>
+                          <li>• Costo: <span className="font-black">Gs. 0</span></li>
+                          <li>• Marcada como 🔴 GARANTÍA</li>
+                        </ul>
                       </div>
-                      <ChevronRight size={16} className="text-gray-300" />
-                    </button>
-                  ))}
+                    </div>
+                  )}
+
+                  {/* Paso 2b: repuesto */}
+                  {repairWarrantyFlow === 'part' && (
+                    <div className="space-y-3">
+                      <button onClick={() => { setRepairWarrantyFlow(null); setRepairWarrantyPart(''); }}
+                        className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">← Cambiar</button>
+
+                      {repairRepairData?.partsUsed?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Repuestos de esta reparación</p>
+                          {repairRepairData.partsUsed.map((p: any, i: number) => (
+                            <button key={i} onClick={() => setRepairWarrantyPart(p.name)}
+                              className={cn('w-full flex items-center justify-between p-3 rounded-2xl border-2 transition-all text-left',
+                                repairWarrantyPart === p.name
+                                  ? 'bg-red-600 border-red-600 text-white'
+                                  : 'bg-gray-50 border-gray-100 hover:border-red-300 text-gray-700')}>
+                              <div className="flex items-center gap-2">
+                                <Package size={14} />
+                                <span className="font-black text-sm">{p.name}</span>
+                              </div>
+                              <span className="text-[10px] font-bold">×{p.quantity}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                          {repairRepairData?.partsUsed?.length > 0 ? 'O escribir manualmente' : '¿Qué repuesto falló?'}
+                        </p>
+                        <input type="text" value={repairWarrantyPart}
+                          onChange={e => setRepairWarrantyPart(e.target.value)}
+                          placeholder="Ej: Pantalla iPhone 13, Batería Samsung A15…"
+                          className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-red-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all" />
+                      </div>
+
+                      {repairWarrantyPart && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+                          <p className="font-black text-red-700 text-sm">
+                            Repuesto: <span className="text-red-600">{repairWarrantyPart}</span>
+                          </p>
+                          <p className="text-[10px] font-bold text-red-400 mt-0.5">Se reabre sin costo. Después marcás pérdida o empate.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+              ) : (
+                /* ═══ FLUJO GARANTÍA DE PRODUCTO (existente) ═══ */
+                <>
+                  {hasMultipleItems && !warrantyItem && (
+                    <div className="space-y-3 mb-6">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">¿Cuál producto trae el cliente?</p>
+                      {saleItems.map((item: any, i: number) => (
+                        <button key={i}
+                          onClick={() => setWarrantyItem({ id: item.id, name: item.name, qty: 1, maxQty: item.quantity || 1 })}
+                          className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-amber-300 hover:bg-amber-50 transition-all text-left">
+                          <div>
+                            <p className="font-black text-gray-800 text-sm">{item.name}</p>
+                            <p className="text-[10px] font-bold text-gray-400">×{item.quantity || 1} unidades · Gs. {toNum(item.price).toLocaleString()} c/u</p>
+                          </div>
+                          <ChevronRight size={16} className="text-gray-300" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {(!hasMultipleItems || warrantyItem) && (() => {
+                    if (!warrantyItem && saleItems.length === 1) {
+                      setTimeout(() => setWarrantyItem({ id: saleItems[0].id, name: saleItems[0].name, qty: 1, maxQty: saleItems[0].quantity || 1 }), 0);
+                    }
+                    const item = warrantyItem || (saleItems.length === 1 ? { id: saleItems[0].id, name: saleItems[0].name, qty: 1, maxQty: saleItems[0].quantity || 1 } : null);
+                    if (!item) return null;
+                    return (
+                      <div className="mb-6 space-y-4">
+                        {warrantyItem && hasMultipleItems && (
+                          <button onClick={() => setWarrantyItem(null)} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">← Cambiar producto</button>
+                        )}
+                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                          <p className="font-black text-gray-800">{item.name}</p>
+                          <p className="text-[10px] font-bold text-gray-400 mt-0.5">Máximo: {item.maxQty} unidad{item.maxQty !== 1 ? 'es' : ''}</p>
+                        </div>
+                        {item.maxQty > 1 && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">¿Cuántas unidades trae?</p>
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => setWarrantyItem(w => w ? { ...w, qty: Math.max(1, w.qty - 1) } : w)} className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center font-black hover:bg-gray-200">−</button>
+                              <span className="text-3xl font-black text-gray-800 w-12 text-center">{item.qty}</span>
+                              <button onClick={() => setWarrantyItem(w => w ? { ...w, qty: Math.min(w.maxQty, w.qty + 1) } : w)} className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black hover:bg-amber-200">+</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  <p className="text-[10px] font-bold text-gray-400 mb-4">
+                    Después decidís si es <span className="font-black text-amber-600">empate</span> (fabricante repone) o <span className="font-black text-red-600">pérdida</span>.
+                  </p>
+                </>
               )}
 
-              {/* Si solo hay un producto O ya seleccionó, mostrar selector de cantidad */}
-              {(!hasMultipleItems || warrantyItem) && (() => {
-                // Si hay un solo ítem y aún no se seteó warrantyItem, inicializarlo
-                // Esto permite que los botones +/- funcionen correctamente
-                if (!warrantyItem && saleItems.length === 1) {
-                  setTimeout(() => setWarrantyItem({
-                    id: saleItems[0].id, name: saleItems[0].name,
-                    qty: 1, maxQty: saleItems[0].quantity || 1
-                  }), 0);
-                }
-                const item = warrantyItem || (saleItems.length === 1 ? {
-                  id: saleItems[0].id, name: saleItems[0].name,
-                  qty: 1, maxQty: saleItems[0].quantity || 1
-                } : null);
-                if (!item && saleItems.length === 0) {
-                  // Es una reparación sin productos
-                  return (
-                    <div className="mb-6">
-                      <p className="text-sm font-bold text-gray-600">
-                        ¿El cliente trae la reparación como defectuosa?
-                      </p>
-                    </div>
-                  );
-                }
-                return item ? (
-                  <div className="mb-6 space-y-4">
-                    {warrantyItem && hasMultipleItems && (
-                      <button onClick={() => setWarrantyItem(null)}
-                        className="flex items-center gap-1.5 text-[10px] font-black text-indigo-500 hover:text-indigo-700">
-                        ← Cambiar producto
-                      </button>
-                    )}
-                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                      <p className="font-black text-gray-800">{item.name}</p>
-                      <p className="text-[10px] font-bold text-gray-400 mt-0.5">Máximo: {item.maxQty} unidad{item.maxQty !== 1 ? 'es' : ''}</p>
-                    </div>
-                    {item.maxQty > 1 && (
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                          ¿Cuántas unidades trae?
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => setWarrantyItem(w => w ? { ...w, qty: Math.max(1, w.qty - 1) } : w)}
-                            className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center font-black hover:bg-gray-200">−</button>
-                          <span className="text-3xl font-black text-gray-800 w-12 text-center">{item.qty}</span>
-                          <button onClick={() => setWarrantyItem(w => w ? { ...w, qty: Math.min(w.maxQty, w.qty + 1) } : w)}
-                            className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-black hover:bg-amber-200">+</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : null;
-              })()}
-
-              <p className="text-[10px] font-bold text-gray-400 mb-4">
-                Después decidís si es <span className="font-black text-amber-600">empate</span> (fabricante repone) o <span className="font-black text-red-600">pérdida</span>.
-              </p>
-
+              {/* Botones */}
               <div className="flex gap-3">
-                <button onClick={() => { setWarrantyModal(null); setWarrantyItem(null); }}
+                <button
+                  onClick={() => { setWarrantyModal(null); setWarrantyItem(null); setRepairWarrantyFlow(null); setRepairWarrantyPart(''); }}
                   className="flex-1 py-3 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50">
                   Cancelar
                 </button>
-                <button
-                  onClick={() => {
-                    // Si hay múltiples ítems y no eligió todavía, no hacer nada
-                    if (hasMultipleItems && !warrantyItem) return;
-                    // Si hay un solo ítem, setear el warrantyItem automáticamente
-                    if (!warrantyItem && saleItems.length === 1) {
-                      setWarrantyItem({ id: saleItems[0].id, name: saleItems[0].name, qty: 1, maxQty: saleItems[0].quantity || 1 });
-                    }
-                    handleApplyWarranty(warrantyModal._id, 'defective');
-                  }}
-                  disabled={applyingWarranty || (hasMultipleItems && !warrantyItem)}
-                  className="flex-1 py-3 rounded-2xl bg-amber-500 text-white font-black hover:bg-amber-600 disabled:opacity-50">
-                  {applyingWarranty ? 'Procesando...' : 'Marcar defectuoso'}
-                </button>
+                {isRepairWarranty ? (
+                  <button
+                    onClick={handleApplyRepairWarranty}
+                    disabled={applyingWarranty || !repairWarrantyFlow || (repairWarrantyFlow === 'part' && !repairWarrantyPart)}
+                    className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-black hover:bg-red-700 disabled:opacity-50 transition-all">
+                    {applyingWarranty ? 'Creando…'
+                      : !repairWarrantyFlow ? 'Elegí una opción'
+                      : repairWarrantyFlow === 'labor' ? 'Confirmar — Reabrir gratis'
+                      : repairWarrantyPart ? 'Confirmar — Garantía repuesto'
+                      : 'Seleccioná el repuesto'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (hasMultipleItems && !warrantyItem) return;
+                      if (!warrantyItem && saleItems.length === 1) {
+                        setWarrantyItem({ id: saleItems[0].id, name: saleItems[0].name, qty: 1, maxQty: saleItems[0].quantity || 1 });
+                      }
+                      handleApplyWarranty(warrantyModal._id, 'defective');
+                    }}
+                    disabled={applyingWarranty || (hasMultipleItems && !warrantyItem)}
+                    className="flex-1 py-3 rounded-2xl bg-amber-500 text-white font-black hover:bg-amber-600 disabled:opacity-50">
+                    {applyingWarranty ? 'Procesando...' : 'Marcar defectuoso'}
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
