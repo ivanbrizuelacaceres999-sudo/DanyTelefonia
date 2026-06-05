@@ -55,16 +55,20 @@ const METHOD_LABEL: Record<string, string> = {
 
 // Imprime el ticket abriendo una ventana nueva — evita el bug de removeChild de react-to-print
 const printTicket = (sale: Sale) => {
+  // Número corto para buscar: últimos 5 chars (diferente al barcode que usa 8)
+  const ticketNum  = sale._id.slice(-5).toUpperCase();
+  const barcodeId  = `VEN-${sale._id.slice(-8).toUpperCase()}`;
+
   const items = sale.items.map(item =>
-    `<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px">
+    `<div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:13px">
       <span style="font-weight:700">${item.name} ×${item.quantity}</span>
       <span style="font-weight:900">Gs. ${(n(item.price) * item.quantity).toLocaleString()}</span>
     </div>`
   ).join('');
 
   const payments = (sale.payments && sale.payments.length > 1)
-    ? `<div style="margin:8px 0;padding:8px;background:#eef2ff;border-radius:8px">
-        <p style="font-size:10px;font-weight:900;color:#6366f1;text-transform:uppercase;margin:0 0 4px">Formas de pago</p>
+    ? `<div style="margin:8px 0;padding:8px;background:#f3f4f6;border-radius:8px">
+        <p style="font-size:10px;font-weight:900;color:#374151;text-transform:uppercase;margin:0 0 4px">Formas de pago</p>
         ${sale.payments.map(p =>
           `<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700">
             <span>${METHOD_LABEL[p.method] || p.method}</span>
@@ -75,7 +79,7 @@ const printTicket = (sale: Sale) => {
     : '';
 
   const discount = n(sale.discount) > 0
-    ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:#ef4444;font-weight:700">
+    ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:#374151;font-weight:700">
         <span>Descuento</span><span>-Gs. ${n(sale.discount).toLocaleString()}</span>
       </div>`
     : '';
@@ -87,48 +91,63 @@ const printTicket = (sale: Sale) => {
   <title>Ticket - Dany Telefonía</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; width: 320px; padding: 24px; color: #1f2937; }
+    body { font-family: Arial, sans-serif; width: 300px; padding: 20px 16px; color: #111; }
     @media print { body { width: 100%; } }
   </style>
 </head>
 <body>
-  <div style="text-align:center;border-bottom:2px solid #e5e7eb;padding-bottom:16px;margin-bottom:16px">
-    <h1 style="font-size:22px;font-weight:900;letter-spacing:-1px">Dany Telefonía</h1>
-    <p style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;margin-top:4px">Ticket de Venta</p>
+  <!-- ENCABEZADO -->
+  <div style="text-align:center;padding-bottom:14px;margin-bottom:14px;border-bottom:2px solid #d1d5db">
+    <h1 style="font-size:20px;font-weight:900;letter-spacing:-0.5px;color:#111">Dany Telefonía</h1>
+    <p style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;margin:3px 0 10px">Ticket de Venta</p>
+    <!-- Número de ticket corto para búsqueda -->
+    <div style="background:#f3f4f6;border-radius:8px;padding:5px 14px;display:inline-block">
+      <p style="font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;margin:0 0 2px">N° Ticket</p>
+      <p style="font-size:22px;font-weight:900;color:#111;margin:0;letter-spacing:-1px">#${ticketNum}</p>
+    </div>
   </div>
-  <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-bottom:12px">
+
+  <!-- FECHA / HORA -->
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-bottom:10px">
     <span>Fecha: ${new Date(sale.date).toLocaleDateString('es-PY')}</span>
     <span>Hora: ${new Date(sale.date).toLocaleTimeString('es-PY',{hour:'2-digit',minute:'2-digit'})}</span>
   </div>
+
+  <!-- CLIENTE -->
   ${sale.customerName && sale.customerName !== 'Consumidor Final'
-    ? `<p style="font-size:13px;font-weight:700;margin-bottom:10px">Cliente: ${sale.customerName}</p>`
+    ? `<p style="font-size:12px;font-weight:700;margin-bottom:8px;color:#111">Cliente: ${sale.customerName}</p>`
     : ''}
-  <div style="margin-bottom:12px">${items}</div>
-  <div style="border-top:2px solid #e5e7eb;padding-top:12px">
+
+  <!-- ITEMS -->
+  <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e5e7eb">${items}</div>
+
+  <!-- TOTALES -->
+  <div>
     ${discount}
     ${payments}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-      <span style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:1px">TOTAL</span>
-      <span style="font-size:28px;font-weight:900;color:#4f46e5">Gs. ${n(sale.total).toLocaleString()}</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding-top:6px;border-top:2px solid #111">
+      <span style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#111">TOTAL</span>
+      <span style="font-size:26px;font-weight:900;color:#111">Gs. ${n(sale.total).toLocaleString()}</span>
     </div>
-    <p style="font-size:10px;color:#9ca3af;text-align:center;margin-top:20px;font-style:italic">¡Gracias por su compra! · Garantía incluida</p>
+    <p style="font-size:10px;color:#9ca3af;text-align:center;margin-top:16px;font-style:italic">¡Gracias por su compra! · Garantía incluida</p>
   </div>
-  <!-- Código de barras VEN- para escanear en garantías -->
-  <!-- Usamos solo los últimos 8 caracteres del ID para que entre en 80mm -->
-  <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:2px dashed #e5e7eb">
-    <p style="font-size:9px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">Código de garantía</p>
-    <svg id="ven-barcode" style="max-width:100%"></svg>
-    <p style="font-size:10px;font-weight:900;color:#6366f1;margin-top:4px;letter-spacing:1px">VEN-${sale._id.slice(-8).toUpperCase()}</p>
-    <p style="font-size:9px;color:#9ca3af;margin-top:2px">Escaneá para verificar garantía</p>
+
+  <!-- CÓDIGO DE BARRAS (solo para escanear, más pequeño) -->
+  <div style="text-align:center;margin-top:16px;padding-top:12px;border-top:2px dashed #d1d5db">
+    <p style="font-size:8px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">Código de garantía</p>
+    <svg id="ven-barcode" style="display:block;margin:0 auto"></svg>
+    <p style="font-size:9px;font-weight:900;color:#374151;margin-top:3px;letter-spacing:1px">${barcodeId}</p>
+    <p style="font-size:8px;color:#d1d5db;margin-top:1px">Escaneá para verificar garantía</p>
   </div>
+
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script>
     window.onload = function(){
       try {
-        JsBarcode("#ven-barcode", "VEN-${sale._id.slice(-8).toUpperCase()}", {
-          format: "CODE128", width: 1.8, height: 45,
-          displayValue: false, margin: 4,
-          lineColor: "#4f46e5"
+        JsBarcode("#ven-barcode", "${barcodeId}", {
+          format: "CODE128", width: 1.3, height: 30,
+          displayValue: false, margin: 2,
+          lineColor: "#111"
         });
       } catch(e){}
       window.print();
@@ -714,28 +733,28 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
 
         {/* Forma de pago */}
-        <div className="space-y-1.5 flex-1 min-w-0 max-w-sm">
+        <div className="space-y-1.5 shrink-0 w-52">
           <div className="flex items-center justify-between">
             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Forma de Pago</label>
-            <button onClick={addPaymentRow} className="text-[9px] font-black text-indigo-500 hover:text-indigo-700 cursor-pointer">+ agregar</button>
+            <button onClick={addPaymentRow} className="text-[9px] font-black text-indigo-500 hover:text-indigo-700 cursor-pointer">+ pago</button>
           </div>
           <div className="space-y-1.5">
             {payments.map((p, idx) => (
-              <div key={idx} className="flex gap-1.5 items-center">
+              <div key={idx} className="flex gap-1 items-center">
                 <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold text-gray-700 outline-none focus:border-indigo-400 cursor-pointer">
+                  className="w-24 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold text-gray-700 outline-none focus:border-indigo-400 cursor-pointer">
                   <option value="cash">Efectivo</option>
-                  <option value="credit_card">T. Credito</option>
-                  <option value="debit_card">T. Debito</option>
-                  <option value="transfer">Transferencia</option>
+                  <option value="credit_card">T. Crédito</option>
+                  <option value="debit_card">T. Débito</option>
+                  <option value="transfer">Transfer.</option>
                   <option value="qr">QR</option>
                   <option value="credit">Cta. May.</option>
                 </select>
                 <NumericInput value={p.amount} placeholder="Monto"
                   onChange={raw => updatePayment(idx, 'amount', raw)}
-                  className="w-28 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
                 {payments.length > 1 && (
-                  <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer shrink-0"><Trash2 size={12} /></button>
+                  <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer shrink-0"><Trash2 size={11} /></button>
                 )}
               </div>
             ))}

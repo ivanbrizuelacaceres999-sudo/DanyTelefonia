@@ -214,6 +214,7 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onR
         const q = searchQuery.trim().toLowerCase();
         return (
           s._id.toLowerCase().includes(q) ||
+          s._id.slice(-5).toLowerCase().includes(q) ||
           (s.customerName || '').toLowerCase().includes(q)
         );
       })
@@ -847,7 +848,7 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onR
                         <div className="flex items-center gap-2">
                           <p className="font-black text-gray-800 text-sm">{s.customerName || 'Consumidor Final'}</p>
                           <span className="inline-flex items-center gap-1 text-[9px] font-black text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-mono">
-                            <Hash size={9} />#{s._id.slice(-8).toUpperCase()}
+                            <Hash size={9} />#{s._id.slice(-5).toUpperCase()}
                           </span>
                         </div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex flex-wrap items-center gap-1">
@@ -902,7 +903,7 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onR
                 <p className="font-mono text-xs font-black text-gray-700 truncate">{selectedSale._id}</p>
               </div>
               <span className="ml-auto text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full font-mono flex-shrink-0">
-                #{selectedSale._id.slice(-8).toUpperCase()}
+                #{selectedSale._id.slice(-5).toUpperCase()}
               </span>
             </div>
 
