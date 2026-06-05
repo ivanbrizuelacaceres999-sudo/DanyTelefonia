@@ -13,6 +13,7 @@ import { StatisticsView } from './components/StatisticsView';
 import { WarrantyView } from './components/WarrantyView';
 import { UsersView } from './components/UsersView';
 import { GastosView } from './components/GastosView';
+import { ConfiguracionesView } from './components/ConfiguracionesView';
 import { motion, AnimatePresence } from 'motion/react';
 import { socket, connectSocket, disconnectSocket, UpdateEvent } from './socket';
 import { useBarcodeScanner, ScanResult } from './hooks/useBarcodeScanner';
@@ -240,6 +241,7 @@ function App() {
       case 'gastos':        return <GastosView fixedCosts={fixedCosts} users={users} onRefresh={fetchData} />;
       case 'warranty':      return <WarrantyView sales={sales} products={products} onRefresh={fetchData} />;
       case 'users':         return <UsersView users={users} onRefresh={fetchData} />;
+      case 'configuraciones': return <ConfiguracionesView />;
       default:              return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
     }
   };

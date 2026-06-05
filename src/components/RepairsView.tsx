@@ -538,6 +538,16 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
     onRefresh();
   };
 
+  const handleWorkbenchChange = async (repair: Repair, workbenchId: string) => {
+    await api.updateRepair(repair._id, { ...repair, workbenchId: workbenchId || null });
+    onRefresh();
+  };
+
+  const handleShelfChange = async (repair: Repair, shelfId: string) => {
+    await api.updateRepair(repair._id, { ...repair, shelfId: shelfId || null });
+    onRefresh();
+  };
+
   const handleCreateType = async (e: React.FormEvent) => {
     e.preventDefault();
     await api.createRepairType({ ...newType, fixedCost: parseInt(newType.fixedCost) || 0 });
@@ -786,21 +796,24 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
                     <option value="pending">⏳ Pendiente</option>
                     <option value="in_progress">🔧 En Proceso</option>
                     <option value="ready">✅ Listo</option>
-                    <option value="delivered">📦 Entregado</option>
                   </select>
 
-                  {/* Badge de ubicación */}
-                  {workbenchName && r.status === 'in_progress' && (
-                    <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 border border-blue-100 rounded-xl">
-                      <Wrench size={11} className="text-blue-500 shrink-0" />
-                      <span className="text-[11px] font-black text-blue-600 truncate">{workbenchName}</span>
-                    </div>
+                  {/* Mesa de reparación — select directo */}
+                  {workbenches.length > 0 && (
+                    <select value={r.workbenchId || ''} onChange={e => handleWorkbenchChange(r, e.target.value)}
+                      className="mt-2 text-[10px] font-black px-3 py-2 rounded-xl w-full border-0 outline-none cursor-pointer uppercase tracking-widest bg-blue-50 text-blue-700">
+                      <option value="">🔧 Sin mesa</option>
+                      {workbenches.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+                    </select>
                   )}
-                  {shelfName && r.status === 'ready' && (
-                    <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl">
-                      <Layers size={11} className="text-emerald-500 shrink-0" />
-                      <span className="text-[11px] font-black text-emerald-600 truncate">{shelfName}</span>
-                    </div>
+
+                  {/* Estante — select directo */}
+                  {shelves.length > 0 && (
+                    <select value={r.shelfId || ''} onChange={e => handleShelfChange(r, e.target.value)}
+                      className="mt-2 text-[10px] font-black px-3 py-2 rounded-xl w-full border-0 outline-none cursor-pointer uppercase tracking-widest bg-emerald-50 text-emerald-700">
+                      <option value="">📦 Sin estante</option>
+                      {shelves.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                    </select>
                   )}
 
                   <div className="mt-3">
