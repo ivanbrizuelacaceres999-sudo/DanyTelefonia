@@ -484,7 +484,6 @@ export const api = {
             expiresAt.setDate(expiresAt.getDate() + warrantyDays);
             await supabase.from('warranties').insert({
               sale_id: sale.id,
-              product_id: item.id,           // ID de la reparación para trazabilidad
               product_name: `Reparación: ${repair.device_model}`,
               customer_name: repair.customer_name,
               date: new Date().toISOString(),
