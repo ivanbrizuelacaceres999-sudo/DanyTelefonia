@@ -419,10 +419,9 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
   const filteredProducts = products.filter(p =>
     n(p.quantity) > 0 && (!searchTerm || p.model.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-  // Mostrar reparaciones listas Y en proceso (no solo 'ready')
-  // El técnico puede querer cobrar aunque no marcó como 'ready'
+  // Solo reparaciones con estado 'listo' — se entregan al cobrar
   const readyRepairs = repairs.filter(r =>
-    (r.status === 'ready' || r.status === 'in_progress' || r.status === 'pending') &&
+    r.status === 'ready' &&
     (!searchTerm || r.deviceModel.toLowerCase().includes(searchTerm.toLowerCase()) ||
      r.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
