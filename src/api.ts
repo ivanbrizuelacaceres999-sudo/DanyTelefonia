@@ -457,9 +457,9 @@ export const api = {
       if (item.type === 'repair' && item.id) {
         const { data: repair } = await supabase.from('repairs').select('*').eq('id', item.id).single();
         if (repair) {
-          // Marcar como entregado al cobrar — dos pasos para evitar fallo silencioso por end_time
+          // Marcar como entregado al cobrar
           await supabase.from('repairs').update({ status: 'delivered' }).eq('id', item.id);
-          await supabase.from('repairs').update({ end_time: new Date().toISOString() }).eq('id', item.id).then(() => {}).catch(() => {});
+          try { await supabase.from('repairs').update({ end_time: new Date().toISOString() }).eq('id', item.id); } catch { /* columna opcional */ }
 
           let repairCost = 0;
           for (const part of (repair.parts_used ?? []) as any[]) {
