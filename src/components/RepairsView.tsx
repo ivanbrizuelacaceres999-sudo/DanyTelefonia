@@ -1231,22 +1231,17 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
                   </div>
                   <div>
                     <p className="font-black text-gray-800">El problema volvió</p>
-                    <p className="text-[10px] font-bold text-gray-500 mt-0.5">No se usaron repuestos o la falla es de mano de obra. Se reabre sin costo.</p>
+                    <p className="text-[10px] font-bold text-gray-500 mt-0.5">Falla de mano de obra. Se reabre sin costo.</p>
                   </div>
                 </button>
                 <button onClick={() => setWarrantyType('part')}
-                  disabled={!warrantyRepair.partsUsed || warrantyRepair.partsUsed.length === 0}
-                  className="w-full flex items-start gap-4 p-4 bg-red-50 border-2 border-red-200 rounded-2xl hover:border-red-400 transition-all text-left disabled:opacity-40 disabled:cursor-not-allowed">
+                  className="w-full flex items-start gap-4 p-4 bg-red-50 border-2 border-red-200 rounded-2xl hover:border-red-400 transition-all text-left">
                   <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 flex-shrink-0">
                     <Package size={20} />
                   </div>
                   <div>
                     <p className="font-black text-gray-800">Un repuesto falló</p>
-                    <p className="text-[10px] font-bold text-gray-500 mt-0.5">
-                      {warrantyRepair.partsUsed?.length
-                        ? 'Seleccionás cuál repuesto es el defectuoso.'
-                        : 'Esta reparación no tiene repuestos registrados.'}
-                    </p>
+                    <p className="text-[10px] font-bold text-gray-500 mt-0.5">Seleccionás el repuesto defectuoso o lo escribís.</p>
                   </div>
                 </button>
               </div>
@@ -1255,9 +1250,7 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
             {/* Paso 2a: mano de obra — confirmar */}
             {warrantyType === 'labor' && (
               <div className="space-y-4">
-                <button onClick={() => setWarrantyType(null)} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">
-                  ← Cambiar
-                </button>
+                <button onClick={() => setWarrantyType(null)} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">← Cambiar</button>
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                   <p className="font-black text-amber-700 text-sm">Se creará una nueva reparación:</p>
                   <ul className="mt-2 space-y-1 text-[11px] font-bold text-amber-600">
@@ -1273,34 +1266,53 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
               </div>
             )}
 
-            {/* Paso 2b: repuesto — elegir cuál */}
+            {/* Paso 2b: repuesto — elegir cuál o escribir */}
             {warrantyType === 'part' && (
               <div className="space-y-4">
-                <button onClick={() => { setWarrantyType(null); setWarrantyPart(''); }} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">
-                  ← Cambiar
-                </button>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">¿Qué repuesto falló?</p>
-                  {warrantyRepair.partsUsed?.map((p, i) => (
-                    <button key={i} onClick={() => setWarrantyPart(p.name)}
-                      className={cn('w-full flex items-center justify-between p-3 rounded-2xl border-2 transition-all text-left',
-                        warrantyPart === p.name
-                          ? 'bg-red-600 border-red-600 text-white'
-                          : 'bg-gray-50 border-gray-100 hover:border-red-300 text-gray-700')}>
-                      <div className="flex items-center gap-2">
-                        <Package size={14} />
-                        <span className="font-black text-sm">{p.name}</span>
-                      </div>
-                      <span className="text-[10px] font-bold">×{p.quantity}</span>
-                    </button>
-                  ))}
-                </div>
-                {warrantyPart && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-2xl space-y-1">
-                    <p className="font-black text-red-700 text-sm">Repuesto defectuoso: {warrantyPart}</p>
-                    <p className="text-[10px] font-bold text-red-500">Se reabre la reparación sin costo. Después marcás pérdida o empate cuando se resuelva.</p>
+                <button onClick={() => { setWarrantyType(null); setWarrantyPart(''); }} className="text-[10px] font-black text-indigo-500 hover:text-indigo-700">← Cambiar</button>
+
+                {/* Si la reparación tenía repuestos guardados, mostrarlos */}
+                {warrantyRepair.partsUsed && warrantyRepair.partsUsed.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Repuestos de esta reparación</p>
+                    {warrantyRepair.partsUsed.map((p, i) => (
+                      <button key={i} onClick={() => setWarrantyPart(p.name)}
+                        className={cn('w-full flex items-center justify-between p-3 rounded-2xl border-2 transition-all text-left',
+                          warrantyPart === p.name
+                            ? 'bg-red-600 border-red-600 text-white'
+                            : 'bg-gray-50 border-gray-100 hover:border-red-300 text-gray-700')}>
+                        <div className="flex items-center gap-2">
+                          <Package size={14} />
+                          <span className="font-black text-sm">{p.name}</span>
+                        </div>
+                        <span className="text-[10px] font-bold">×{p.quantity}</span>
+                      </button>
+                    ))}
+                    <p className="text-[10px] font-bold text-gray-400">O escribilo manualmente abajo:</p>
                   </div>
                 )}
+
+                {/* Siempre mostrar input manual */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    {warrantyRepair.partsUsed?.length ? 'O escribir otro repuesto' : '¿Qué repuesto falló?'}
+                  </p>
+                  <input
+                    type="text"
+                    value={warrantyPart}
+                    onChange={e => setWarrantyPart(e.target.value)}
+                    placeholder="Ej: Pantalla iPhone 13, Batería Samsung A15…"
+                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-red-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all"
+                  />
+                </div>
+
+                {warrantyPart && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl">
+                    <p className="font-black text-red-700 text-sm">Repuesto defectuoso: <span className="text-red-600">{warrantyPart}</span></p>
+                    <p className="text-[10px] font-bold text-red-400 mt-0.5">Se reabre sin costo. Después marcás pérdida o empate.</p>
+                  </div>
+                )}
+
                 <button onClick={handleApplyWarranty} disabled={applyingWarranty || !warrantyPart}
                   className="w-full py-4 rounded-2xl bg-red-600 text-white font-black hover:bg-red-700 transition-all disabled:opacity-50">
                   {applyingWarranty ? 'Creando…' : 'Confirmar — Garantía de repuesto'}
