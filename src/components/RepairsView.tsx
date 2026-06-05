@@ -1288,14 +1288,21 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
                         <span className="text-[10px] font-bold">×{p.quantity}</span>
                       </button>
                     ))}
-                    <p className="text-[10px] font-bold text-gray-400">O escribilo manualmente abajo:</p>
                   </div>
                 )}
 
-                {/* Siempre mostrar input manual */}
+                {/* Buscar en inventario completo */}
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    {warrantyRepair.partsUsed?.length ? 'O escribir otro repuesto' : '¿Qué repuesto falló?'}
+                    Buscar repuesto en inventario
+                  </p>
+                  <PartSearch products={products} onSelect={p => setWarrantyPart(p.model)} />
+                </div>
+
+                {/* Input manual como fallback */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    O escribir manualmente
                   </p>
                   <input
                     type="text"
