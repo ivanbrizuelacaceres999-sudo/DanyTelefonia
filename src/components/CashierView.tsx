@@ -248,6 +248,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
 
   // ── Nuevo diseño ────────────────────────────────────────────────
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'products' | 'repairs'>('all');
+  const [mobileView,    setMobileView]    = useState<'catalog' | 'ticket'>('catalog');
   const [discountType,  setDiscountType]  = useState<'gs' | 'pct'>('gs');
   const [addModal, setAddModal] = useState<{
     type: 'product'; product: Product;
@@ -490,6 +491,8 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
     });
     setAddModal(null);
     setErrorMsg('');
+    // En mobile, ir al ticket automáticamente al agregar
+    if (window.innerWidth < 768) setMobileView('ticket');
   };
 
   if (loadingSession) return (
@@ -532,10 +535,10 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
   return (
     <>
     {/* NUEVO DISEÑO POS */}
-    <div className="flex flex-col -m-4 md:-m-8 lg:-m-12" style={{height:'calc(100vh - 5rem)'}}>
+    <div className="flex flex-col -m-4 md:-m-8 lg:-m-12" style={{height:'calc(100dvh - 5rem)'}}>
 
-      {/* HEADER */}
-      <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-100 shrink-0 bg-white">
+      {/* ── HEADER DESKTOP ── */}
+      <div className="hidden md:flex items-center justify-between px-6 py-3.5 border-b border-gray-100 shrink-0 bg-white">
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shrink-0" />
           <div>
@@ -562,30 +565,85 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
       </div>
 
-      {/* BUSCADOR + TABS */}
-      <div className="px-6 py-3 border-b border-gray-100 shrink-0 bg-white flex items-center gap-3">
+      {/* ── HEADER MOBILE (compacto) ── */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0 bg-white">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+          <div>
+            <h2 className="text-base font-black text-gray-800 tracking-tighter leading-none">Caja Abierta</h2>
+            <p className="text-[9px] font-bold text-emerald-600 mt-0.5">
+              Gs. {cashInBox.toLocaleString()} en caja
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setShowWithdrawal(true); setErrorMsg(''); }}
+            className="w-9 h-9 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center border border-orange-100 cursor-pointer active:scale-95 transition-all"
+            title="Retiro">
+            <ArrowDownLeft size={17} />
+          </button>
+          <button onClick={closeSession}
+            className="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+            title="Cerrar Caja">
+            <XCircle size={17} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── BUSCADOR + TABS ── */}
+      <div className="px-4 md:px-6 py-3 border-b border-gray-100 shrink-0 bg-white flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
           <input type="text" placeholder="Buscar producto o reparacion..." value={searchTerm}
             onChange={e => { setSearchTerm(e.target.value); setErrorMsg(''); }}
             className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-2.5 pl-9 pr-4 outline-none font-bold text-gray-700 text-sm focus:bg-white focus:border-indigo-300 transition-all" />
         </div>
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex gap-1 md:gap-1.5 shrink-0">
           {(['all', 'products', 'repairs'] as const).map(f => (
             <button key={f} onClick={() => setCatalogFilter(f)}
-              className={cn('px-4 py-2 rounded-2xl font-black text-xs transition-all cursor-pointer',
+              className={cn('flex-1 md:flex-none px-3 md:px-4 py-2 rounded-2xl font-black text-xs transition-all cursor-pointer',
                 catalogFilter === f ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>
-              {f === 'all' ? 'Todo' : f === 'products' ? 'Productos' : 'Reparaciones'}
+              {f === 'all' ? 'Todo' : f === 'products' ? 'Prod.' : 'Rep.'}
+              <span className="hidden md:inline">{f === 'products' ? 'uctos' : f === 'repairs' ? 'araciones' : ''}</span>
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ── TABS MOBILE: Catálogo / Ticket ── */}
+      <div className="md:hidden flex shrink-0 bg-white border-b border-gray-100">
+        <button onClick={() => setMobileView('catalog')}
+          className={cn('flex-1 py-2.5 text-xs font-black transition-colors border-b-2',
+            mobileView === 'catalog'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-gray-400 border-transparent')}>
+          Catálogo <span className="text-[10px] font-bold text-gray-400">({catalogItems.length})</span>
+        </button>
+        <button onClick={() => setMobileView('ticket')}
+          className={cn('flex-1 py-2.5 text-xs font-black transition-colors border-b-2 flex items-center justify-center gap-1.5',
+            mobileView === 'ticket'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-gray-400 border-transparent')}>
+          Ticket
+          {cart.length > 0 && (
+            <span className="w-5 h-5 bg-indigo-600 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+              {cart.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* MAIN: CATALOGO + TICKET */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* CATALOGO */}
-        <div className="w-[42%] border-r border-gray-100 flex flex-col min-h-0 bg-gray-50/40">
+        <div className={cn(
+          'border-r border-gray-100 flex-col min-h-0 bg-gray-50/40',
+          // Desktop: siempre visible, 42%
+          'md:flex md:w-[42%]',
+          // Mobile: visible solo si mobileView === catalog
+          mobileView === 'catalog' ? 'flex flex-1' : 'hidden',
+        )}>
           <div className="px-5 py-3 flex items-center justify-between shrink-0">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Catalogo</p>
             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{catalogItems.length}</span>
@@ -643,7 +701,13 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
 
         {/* TICKET DE VENTA */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white">
+        <div className={cn(
+          'flex-col min-h-0 bg-white',
+          // Desktop: siempre visible, flex-1
+          'md:flex md:flex-1',
+          // Mobile: visible solo si mobileView === ticket
+          mobileView === 'ticket' ? 'flex flex-1' : 'hidden',
+        )}>
           <div className="px-6 py-3 flex items-center justify-between shrink-0 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <ShoppingCart size={15} className="text-indigo-600" />
@@ -718,8 +782,94 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
       </div>
 
-      {/* BARRA INFERIOR DE COBRO */}
-      <div className="shrink-0 border-t-2 border-gray-100 bg-white px-6 py-4 flex items-end gap-5 flex-wrap md:flex-nowrap">
+      {/* ── BARRA INFERIOR MOBILE ── */}
+      <div className="md:hidden shrink-0 border-t-2 border-gray-100 bg-white px-4 py-3 space-y-3">
+
+        {/* Fila 1: Cliente + Descuento */}
+        <div className="flex gap-3">
+          <div className="flex-1 space-y-1">
+            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Cliente</label>
+            <select value={wholesalerId || ''}
+              onChange={e => { setWholesalerId(e.target.value); if (e.target.value) setCustomerName(''); }}
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2.5 outline-none font-bold text-xs text-gray-700 focus:border-indigo-400 cursor-pointer">
+              <option value="">Consumidor Final</option>
+              {wholesalers.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1 shrink-0">
+            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Descuento</label>
+            <div className="flex items-center gap-1">
+              <NumericInput value={discount} onChange={raw => setDiscount(raw)}
+                className="w-14 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-center text-gray-700 outline-none focus:border-indigo-400" />
+              <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                <button onClick={() => setDiscountType('pct')}
+                  className={cn('px-2 py-2 text-[10px] font-black cursor-pointer', discountType === 'pct' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-500')}>%</button>
+                <button onClick={() => setDiscountType('gs')}
+                  className={cn('px-2 py-2 text-[10px] font-black cursor-pointer border-l border-gray-200', discountType === 'gs' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-500')}>Gs</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fila 2: Forma de pago */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Forma de Pago</label>
+            <button onClick={addPaymentRow} className="text-[9px] font-black text-indigo-500 cursor-pointer">+ pago</button>
+          </div>
+          {payments.map((p, idx) => (
+            <div key={idx} className="flex gap-1.5 items-center">
+              <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-2 text-xs font-bold text-gray-700 outline-none cursor-pointer">
+                <option value="cash">Efectivo</option>
+                <option value="credit_card">T. Crédito</option>
+                <option value="debit_card">T. Débito</option>
+                <option value="transfer">Transferencia</option>
+                <option value="qr">QR</option>
+                <option value="credit">Cta. May.</option>
+              </select>
+              <NumericInput value={p.amount} placeholder="Monto"
+                onChange={raw => updatePayment(idx, 'amount', raw)}
+                className="w-28 bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-2 text-base font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+              {payments.length > 1 && (
+                <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer"><Trash2 size={13} /></button>
+              )}
+            </div>
+          ))}
+          {total > 0 && totalPaid > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                <div className={cn('h-1.5 rounded-full transition-all', totalPaid >= total ? 'bg-emerald-500' : 'bg-indigo-400')}
+                  style={{width:`${Math.min(100,(totalPaid/total)*100)}%`}} />
+              </div>
+              <span className="text-[10px] font-black shrink-0">
+                {resta > 0 ? <span className="text-amber-600">Falta Gs. {resta.toLocaleString()}</span>
+                  : vuelto > 0 ? <span className="text-emerald-600">Vuelto Gs. {vuelto.toLocaleString()}</span>
+                  : <span className="text-emerald-600">✓ Completo</span>}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Fila 3: Total + Finalizar */}
+        <div className="flex items-center gap-3">
+          <div>
+            {discountN > 0 && <p className="text-[10px] text-gray-400 font-bold line-through leading-none">Gs. {subtotal.toLocaleString()}</p>}
+            <p className="text-2xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
+          </div>
+          <button onClick={checkout}
+            disabled={cart.length === 0 || isProcessing || totalPaid !== total || total === 0}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:shadow-none cursor-pointer text-sm">
+            {isProcessing
+              ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
+              : <><Printer size={15} /> Finalizar Venta</>
+            }
+          </button>
+        </div>
+      </div>
+
+      {/* ── BARRA INFERIOR DESKTOP (sin cambios) ── */}
+      <div className="hidden md:flex shrink-0 border-t-2 border-gray-100 bg-white px-6 py-4 items-end gap-5">
 
         {/* Cliente */}
         <div className="space-y-1.5 w-36 shrink-0">
