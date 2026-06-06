@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from './api';
+import {
+  requestPermission, initKnownIds, getSettings,
+  checkWarranty, checkSales10, checkOldRepairs, checkWithdrawal,
+} from './utils/notifications';
 import { UserProfile, Category, Wholesaler, FixedCost, Product, Repair, Sale } from './types';
 import { Sidebar } from './components/Sidebar';
 import { LoginScreen } from './components/LoginScreen';
@@ -44,6 +48,7 @@ function App() {
   const [activeTab, setActiveTab]     = useState('dashboard');
   const [collapsed, setCollapsed]     = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const notifInitialized              = useRef(false);
 
   const [products,    setProducts]    = useState<Product[]>([]);
   const [repairs,     setRepairs]     = useState<Repair[]>([]);
@@ -84,13 +89,33 @@ function App() {
         api.getCategories(), api.getWholesalers(),
         api.getFixedCosts(), api.getUsers()
       ]);
+      const repairs_     = Array.isArray(r)  ? r  : [];
+      const sales_       = Array.isArray(s)  ? s  : [];
+      const wholesalers_ = Array.isArray(w)  ? w  : [];
+
       setProducts(Array.isArray(p)   ? p   : []);
-      setRepairs(Array.isArray(r)    ? r   : []);
-      setSales(Array.isArray(s)      ? s   : []);
+      setRepairs(repairs_);
+      setSales(sales_);
       setCategories(Array.isArray(c) ? c   : []);
-      setWholesalers(Array.isArray(w)? w   : []);
+      setWholesalers(wholesalers_);
       setFixedCosts(Array.isArray(fc)? fc  : []);
       setUsers(Array.isArray(u)      ? u   : []);
+
+      // ── Notificaciones ─────────────────────────────────────────
+      const settings = getSettings();
+      // Obtener retiros para check de notificaciones
+      const withdrawals_ = await (api as any).getCashWithdrawals().catch(() => []);
+      const withdrawalsArr = Array.isArray(withdrawals_) ? withdrawals_ : [];
+      // Primera carga: marcar existentes como "ya vistos"
+      if (!notifInitialized.current) {
+        notifInitialized.current = true;
+        initKnownIds(repairs_, withdrawalsArr);
+      }
+      // Chequear condiciones (los sets internos evitan repetición)
+      checkWarranty(repairs_, settings);
+      checkSales10(sales_, settings);
+      checkOldRepairs(repairs_, settings);
+      checkWithdrawal(withdrawalsArr, settings);
     } catch { /* silent */ }
   };
 
@@ -222,7 +247,12 @@ function App() {
     }
   };
 
-  const handleLogin  = (u: UserProfile) => { localStorage.setItem('phoneMasterUser', JSON.stringify(u)); setUser(u); };
+  const handleLogin  = (u: UserProfile) => {
+    localStorage.setItem('phoneMasterUser', JSON.stringify(u));
+    setUser(u);
+    // Pedir permiso de notificaciones al loguearse
+    requestPermission();
+  };
   const handleLogout = () => { localStorage.removeItem('phoneMasterUser'); setUser(null); setActiveTab('dashboard'); };
 
   const lowStockCount = products.filter(p => p.quantity <= 3).length;
