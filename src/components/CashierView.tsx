@@ -3,12 +3,12 @@ import {
   Search, ShoppingCart, Trash2, Package, Wrench,
   DollarSign, Play, XCircle, ArrowRight, Tag, Plus,
   AlertTriangle, Minus, CheckCircle, Printer, ArrowDownLeft,
-  X, Settings2
+  X, Settings2, ShoppingBag
 } from 'lucide-react';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { api } from '../api';
-import { Product, Repair, Wholesaler, Sale, CashSession, UserProfile, CashWithdrawal, WithdrawalMotive } from '../types';
+import { Product, Repair, Wholesaler, Sale, CashSession, UserProfile, CashWithdrawal, WithdrawalMotive, ReventaItem } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { cn } from '../lib/utils';
@@ -18,8 +18,8 @@ interface CashierViewProps {
   products: Product[];
   repairs: Repair[];
   wholesalers: Wholesaler[];
+  reventaItems?: ReventaItem[];
   onRefresh: () => void;
-  // Producto detectado por el escáner — se agrega al carrito automáticamente
   scanProduct?: Product | null;
   onScanHandled?: () => void;
 }
@@ -35,7 +35,7 @@ type PriceType = 'normal' | 'wholesale' | 'cheap';
 
 interface CartItem {
   id: string;
-  type: 'product' | 'repair';
+  type: 'product' | 'repair' | 'reventa';
   name: string;
   price: number;
   cost: number;
@@ -174,7 +174,7 @@ const printTicket = (sale: Sale) => {
   }, 400);
 };
 
-export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, scanProduct, onScanHandled }: CashierViewProps) => {
+export const CashierView = ({ user, products, repairs, wholesalers, reventaItems = [], onRefresh, scanProduct, onScanHandled }: CashierViewProps) => {
   const [session, setSession] = useState<CashSession | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [isOpeningSession, setIsOpeningSession] = useState(false);
@@ -247,13 +247,13 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
   const [pendingConfirm,   setPendingConfirm]   = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // ── Nuevo diseño ────────────────────────────────────────────────
-  const [catalogFilter, setCatalogFilter] = useState<'all' | 'products' | 'repairs'>('all');
+  const [catalogFilter, setCatalogFilter] = useState<'all' | 'products' | 'repairs' | 'reventas'>('all');
   const [mobileView,    setMobileView]    = useState<'catalog' | 'ticket'>('catalog');
   const [discountType,  setDiscountType]  = useState<'gs' | 'pct'>('gs');
   const [addModal, setAddModal] = useState<{
     type: 'product'; product: Product;
     qty: string; priceType: PriceType;
-  } | { type: 'repair'; repair: Repair } | null>(null);
+  } | { type: 'repair'; repair: Repair } | { type: 'reventa'; item: ReventaItem; qty: string } | null>(null);
 
   const loadSession = async () => {
     setLoadingSession(true);
@@ -456,15 +456,33 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
      r.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const filteredReventa = reventaItems.filter(r =>
+    n(r.quantity) > 0 && (!searchTerm || r.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   // ── Catálogo unificado según filtro ─────────────────────────────
-  const catalogItems: ({ kind: 'product'; data: Product } | { kind: 'repair'; data: Repair })[] = [
-    ...(catalogFilter !== 'repairs' ? filteredProducts.map(p => ({ kind: 'product' as const, data: p })) : []),
-    ...(catalogFilter !== 'products' ? readyRepairs.map(r => ({ kind: 'repair' as const, data: r })) : []),
+  const catalogItems: ({ kind: 'product'; data: Product } | { kind: 'repair'; data: Repair } | { kind: 'reventa'; data: ReventaItem })[] = [
+    ...(catalogFilter !== 'repairs' && catalogFilter !== 'reventas' ? filteredProducts.map(p => ({ kind: 'product' as const, data: p })) : []),
+    ...(catalogFilter !== 'products' && catalogFilter !== 'reventas' ? readyRepairs.map(r => ({ kind: 'repair' as const, data: r })) : []),
+    ...(catalogFilter !== 'products' && catalogFilter !== 'repairs' ? filteredReventa.map(r => ({ kind: 'reventa' as const, data: r })) : []),
   ];
 
   // ── Agregar producto desde modal ─────────────────────────────────
   const addFromModal = () => {
     if (!addModal) return;
+    if (addModal.type === 'reventa') {
+      const r = addModal.item;
+      const quantity = Math.max(1, parseInt(addModal.qty) || 1);
+      if (cart.find(i => i.id === r._id)) { setAddModal(null); return; }
+      if (n(r.quantity) < quantity) { setErrorMsg(`Stock insuficiente: solo ${r.quantity} unidades.`); return; }
+      setCart(prev => [...prev, {
+        id: r._id, type: 'reventa' as const,
+        name: r.name, price: n(r.salePrice), cost: n(r.costPrice), quantity,
+      }]);
+      setAddModal(null); setErrorMsg('');
+      if (window.innerWidth < 768) setMobileView('ticket');
+      return;
+    }
     if (addModal.type === 'repair') {
       const r = addModal.repair;
       if (cart.find(i => i.id === r._id)) { setAddModal(null); return; }
@@ -599,12 +617,12 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
             className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-2.5 pl-9 pr-4 outline-none font-bold text-gray-700 text-sm focus:bg-white focus:border-indigo-300 transition-all" />
         </div>
         <div className="flex gap-1 md:gap-1.5 shrink-0">
-          {(['all', 'products', 'repairs'] as const).map(f => (
+          {(['all', 'products', 'repairs', 'reventas'] as const).map(f => (
             <button key={f} onClick={() => setCatalogFilter(f)}
               className={cn('flex-1 md:flex-none px-3 md:px-4 py-2 rounded-2xl font-black text-xs transition-all cursor-pointer',
                 catalogFilter === f ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200')}>
-              {f === 'all' ? 'Todo' : f === 'products' ? 'Prod.' : 'Rep.'}
-              <span className="hidden md:inline">{f === 'products' ? 'uctos' : f === 'repairs' ? 'araciones' : ''}</span>
+              {f === 'all' ? 'Todo' : f === 'products' ? 'Prod.' : f === 'repairs' ? 'Rep.' : 'Rev.'}
+              <span className="hidden md:inline">{f === 'products' ? 'uctos' : f === 'repairs' ? 'araciones' : f === 'reventas' ? 'entas' : ''}</span>
             </button>
           ))}
         </div>
@@ -674,7 +692,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                         <p className="font-black text-emerald-600 mt-2 text-sm">Gs. {n(p.salePrice).toLocaleString()}</p>
                       </button>
                     );
-                  } else {
+                  } else if (item.kind === 'repair') {
                     const r = item.data;
                     const inCart = !!cart.find(c => c.id === r._id);
                     return (
@@ -691,6 +709,24 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                         <p className="text-[10px] font-bold text-gray-400 mt-0.5 truncate">{r.customerName}</p>
                         <p className="font-black text-emerald-600 mt-2 text-sm">Gs. {n(r.totalCost).toLocaleString()}</p>
                         {inCart && <span className="mt-1 text-[9px] font-black text-emerald-600">En ticket</span>}
+                      </button>
+                    );
+                  } else {
+                    const r = item.data;
+                    const inCart = !!cart.find(c => c.id === r._id);
+                    return (
+                      <button key={r._id}
+                        onClick={() => setAddModal({ type: 'reventa', item: r, qty: '1' })}
+                        className={cn('flex flex-col p-4 rounded-2xl border text-left transition-all active:scale-[0.98] hover:shadow-md cursor-pointer',
+                          inCart ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200 hover:border-orange-200')}>
+                        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3',
+                          inCart ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-600')}>
+                          <ShoppingBag size={18} />
+                        </div>
+                        <p className="font-black text-gray-800 text-sm leading-snug">{r.name}</p>
+                        <p className="text-[10px] font-bold text-gray-400 mt-0.5">Stock: {r.quantity}</p>
+                        <p className="font-black text-orange-600 mt-2 text-sm">Gs. {n(r.salePrice).toLocaleString()}</p>
+                        {inCart && <span className="mt-1 text-[9px] font-black text-orange-600">En ticket</span>}
                       </button>
                     );
                   }
@@ -743,7 +779,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                   <p className="font-black text-emerald-600 text-[15px] shrink-0">Gs. {(n(item.price) * item.quantity).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-3 mt-2">
-                  {item.type === 'product' ? (
+                  {item.type !== 'repair' ? (
                     <div className="flex items-center gap-2">
                       <button onClick={() => changeQty(item.id, -1)}
                         className="w-6 h-6 bg-gray-100 hover:bg-red-100 hover:text-red-600 rounded-lg flex items-center justify-center text-gray-500 font-black text-sm transition-colors cursor-pointer">
@@ -757,6 +793,9 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                     </div>
                   ) : (
                     <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg">Servicio</span>
+                  )}
+                  {item.type === 'reventa' && (
+                    <span className="text-[9px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">REVENTA</span>
                   )}
                   <p className="text-[11px] font-bold text-gray-400">Gs. {n(item.price).toLocaleString()} c/u</p>
                   <div className="flex-1" />
@@ -976,7 +1015,38 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
             className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md"
             onClick={e => e.stopPropagation()}>
 
-            {addModal.type === 'repair' ? (
+            {addModal.type === 'reventa' ? (
+              <div className="space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600"><ShoppingBag size={28} /></div>
+                  <div>
+                    <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Reventa — Agregar al ticket</p>
+                    <h3 className="text-xl font-black text-gray-800">{addModal.item.name}</h3>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Stock: {addModal.item.quantity}</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad</p>
+                  <div className="flex items-center justify-center gap-4 bg-gray-50 rounded-2xl py-4">
+                    <button onClick={() => setAddModal(prev => prev?.type === 'reventa' ? { ...prev, qty: String(Math.max(1, parseInt(prev.qty || '1') - 1)) } : prev)}
+                      className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all cursor-pointer text-lg">-</button>
+                    <span className="text-4xl font-black text-gray-800 w-12 text-center">{addModal.qty || '1'}</span>
+                    <button onClick={() => setAddModal(prev => prev?.type === 'reventa' ? { ...prev, qty: String(Math.min(n(prev.item.quantity), parseInt(prev.qty || '1') + 1)) } : prev)}
+                      className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-orange-500 hover:bg-orange-50 shadow-sm transition-all cursor-pointer text-lg">+</button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl">
+                  <span className="font-black text-gray-700">{addModal.qty || 1} × {addModal.item.name}</span>
+                  <span className="font-black text-orange-700 text-xl">Gs. {(n(addModal.item.salePrice) * parseInt(addModal.qty || '1')).toLocaleString()}</span>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setAddModal(null)} className="flex-1 py-3 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">Cancelar</button>
+                  <button onClick={addFromModal} className="flex-1 py-3 rounded-2xl bg-orange-500 text-white font-black hover:bg-orange-600 shadow-xl shadow-orange-200 cursor-pointer flex items-center justify-center gap-2">
+                    <Plus size={16} /> Agregar al ticket
+                  </button>
+                </div>
+              </div>
+            ) : addModal.type === 'repair' ? (
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600"><Wrench size={28} /></div>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard, Package, Wrench, ShoppingCart,
   Users, History, ShieldCheck, LogOut, ChevronLeft, ChevronRight,
-  TrendingUp, Wallet, MoreHorizontal, X, Settings,
+  TrendingUp, Wallet, MoreHorizontal, X, Settings, ShoppingBag,
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { cn } from '../lib/utils';
@@ -23,6 +23,7 @@ const SHORT_LABEL: Record<string, string> = {
   stock:         'Stock',
   repairs:       'Reparac.',
   cashier:       'Caja',
+  reventas:      'Reventas',
   wholesale:     'Mayoris.',
   history:       'Historial',
   stats:         'Estadíst.',
@@ -42,6 +43,7 @@ export const Sidebar = ({ user, activeTab, setActiveTab, collapsed, setCollapsed
     { id: 'stock',         label: 'Stock',           icon: Package,         roles: ['admin', 'cashier', 'technician'] },
     { id: 'repairs',       label: 'Reparaciones',    icon: Wrench,          roles: ['admin', 'cashier', 'technician'] },
     { id: 'cashier',       label: 'Caja',            icon: ShoppingCart,    roles: ['admin', 'cashier'] },
+    { id: 'reventas',      label: 'Reventas',        icon: ShoppingBag,     roles: ['admin', 'cashier'] },
     { id: 'wholesale',     label: 'Mayoristas',      icon: TrendingUp,      roles: ['admin', 'cashier'] },
     { id: 'history',       label: 'Historial',       icon: History,         roles: ['admin', 'cashier'] },
     { id: 'stats',         label: 'Estadísticas',    icon: TrendingUp,      roles: ['admin'] },

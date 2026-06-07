@@ -4,7 +4,7 @@ import {
   requestPermission, initKnownIds, getSettings,
   checkWarranty, checkSales10, checkOldRepairs, checkWithdrawal,
 } from './utils/notifications';
-import { UserProfile, Category, Wholesaler, FixedCost, Product, Repair, Sale } from './types';
+import { UserProfile, Category, Wholesaler, FixedCost, Product, Repair, Sale, ReventaItem, ReventaSupplier } from './types';
 import { Sidebar } from './components/Sidebar';
 import { LoginScreen } from './components/LoginScreen';
 import { DashboardView } from './components/DashboardView';
@@ -18,6 +18,7 @@ import { WarrantyView } from './components/WarrantyView';
 import { UsersView } from './components/UsersView';
 import { GastosView } from './components/GastosView';
 import { ConfiguracionesView } from './components/ConfiguracionesView';
+import { ReventasView } from './components/ReventasView';
 import { motion, AnimatePresence } from 'motion/react';
 import { socket, connectSocket, disconnectSocket, UpdateEvent } from './socket';
 import { useBarcodeScanner, ScanResult } from './hooks/useBarcodeScanner';
@@ -50,13 +51,15 @@ function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const notifInitialized              = useRef(false);
 
-  const [products,    setProducts]    = useState<Product[]>([]);
-  const [repairs,     setRepairs]     = useState<Repair[]>([]);
-  const [sales,       setSales]       = useState<Sale[]>([]);
-  const [categories,  setCategories]  = useState<Category[]>([]);
-  const [wholesalers, setWholesalers] = useState<Wholesaler[]>([]);
-  const [fixedCosts,  setFixedCosts]  = useState<FixedCost[]>([]);
-  const [users,       setUsers]       = useState<UserProfile[]>([]);
+  const [products,         setProducts]         = useState<Product[]>([]);
+  const [repairs,          setRepairs]          = useState<Repair[]>([]);
+  const [sales,            setSales]            = useState<Sale[]>([]);
+  const [categories,       setCategories]       = useState<Category[]>([]);
+  const [wholesalers,      setWholesalers]      = useState<Wholesaler[]>([]);
+  const [fixedCosts,       setFixedCosts]       = useState<FixedCost[]>([]);
+  const [users,            setUsers]            = useState<UserProfile[]>([]);
+  const [reventaItems,     setReventaItems]     = useState<ReventaItem[]>([]);
+  const [reventaSuppliers, setReventaSuppliers] = useState<ReventaSupplier[]>([]);
 
   // ── Estados de los modales del escáner ───────────────────────
   const [restockModal,  setRestockModal]  = useState<RestockModal | null>(null);
@@ -84,10 +87,11 @@ function App() {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [p, r, s, c, w, fc, u] = await Promise.all([
+      const [p, r, s, c, w, fc, u, ri, rs] = await Promise.all([
         api.getProducts(), api.getRepairs(), api.getSales(),
         api.getCategories(), api.getWholesalers(),
-        api.getFixedCosts(), api.getUsers()
+        api.getFixedCosts(), api.getUsers(),
+        (api as any).getReventaItems(), (api as any).getReventaSuppliers(),
       ]);
       const repairs_     = Array.isArray(r)  ? r  : [];
       const sales_       = Array.isArray(s)  ? s  : [];
@@ -100,6 +104,8 @@ function App() {
       setWholesalers(wholesalers_);
       setFixedCosts(Array.isArray(fc)? fc  : []);
       setUsers(Array.isArray(u)      ? u   : []);
+      setReventaItems(Array.isArray(ri)  ? ri  : []);
+      setReventaSuppliers(Array.isArray(rs) ? rs : []);
 
       // ── Notificaciones ─────────────────────────────────────────
       const settings = getSettings();
@@ -142,7 +148,9 @@ function App() {
           case 'categories':  api.getCategories().then(c => setCategories(Array.isArray(c) ? c : [])); break;
           case 'wholesalers': api.getWholesalers().then(w => setWholesalers(Array.isArray(w) ? w : [])); break;
           case 'fixed-costs': api.getFixedCosts().then(fc => setFixedCosts(Array.isArray(fc) ? fc : [])); break;
-          case 'users':       api.getUsers().then(u => setUsers(Array.isArray(u) ? u : [])); break;
+          case 'users':             api.getUsers().then(u => setUsers(Array.isArray(u) ? u : [])); break;
+          case 'reventa-items':     (api as any).getReventaItems().then((ri: any) => setReventaItems(Array.isArray(ri) ? ri : [])); break;
+          case 'reventa-suppliers': (api as any).getReventaSuppliers().then((rs: any) => setReventaSuppliers(Array.isArray(rs) ? rs : [])); break;
           default:            fetchData();
         }
       };
@@ -264,7 +272,8 @@ function App() {
       case 'dashboard':     return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
       case 'stock':         return <StockView products={products} categories={categories} onRefresh={fetchData} />;
       case 'repairs':       return <RepairsView repairs={repairs} products={products} onRefresh={fetchData} users={users} />;
-      case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
+      case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
+      case 'reventas':      return <ReventasView reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} />;
       case 'wholesale':     return <WholesaleView wholesalers={wholesalers} onRefresh={fetchData} />;
       case 'history':       return <HistoryView sales={sales} fixedCosts={fixedCosts} repairs={repairs} products={products} user={user} onRefresh={fetchData} />;
       case 'stats':         return <StatisticsView />;

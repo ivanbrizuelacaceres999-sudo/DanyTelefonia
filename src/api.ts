@@ -454,6 +454,15 @@ export const api = {
         if (prod) await supabase.from('products').update({ quantity: (prod.quantity ?? 0) - (item.quantity ?? 1) }).eq('id', item.id);
       }
 
+      if (item.type === 'reventa' && item.id) {
+        const { data: ritem } = await supabase.from('reventa_items').select('quantity').eq('id', item.id).single();
+        if (ritem) {
+          await supabase.from('reventa_items').update({
+            quantity: Math.max(0, (ritem.quantity ?? 0) - (item.quantity ?? 1)),
+          }).eq('id', item.id);
+        }
+      }
+
       if (item.type === 'repair' && item.id) {
         const { data: repair } = await supabase.from('repairs').select('*').eq('id', item.id).single();
         if (repair) {
@@ -538,6 +547,7 @@ export const api = {
     await broadcast('sales');
     await broadcast('products');
     await broadcast('warranties');
+    await broadcast('reventa-items');
     return toClient(sale);
   },
 
@@ -724,6 +734,52 @@ export const api = {
   deleteWithdrawalMotive: async (id: string) => {
     await supabase.from('withdrawal_motives').delete().eq('id', id);
     await broadcast('withdrawal-motives');
+    return { ok: true };
+  },
+
+  // ─── Reventa Suppliers ───────────────────────────────────────
+  getReventaSuppliers: async () => {
+    const { data } = await supabase.from('reventa_suppliers').select('*').order('name');
+    return toClient(data ?? []);
+  },
+  createReventaSupplier: async (body: { name: string; contact?: string }) => {
+    const { data, error } = await supabase.from('reventa_suppliers').insert(toDB(body)).select().single();
+    if (error) throw new Error(error.message);
+    await broadcast('reventa-suppliers');
+    return toClient(data);
+  },
+  deleteReventaSupplier: async (id: string) => {
+    await supabase.from('reventa_suppliers').delete().eq('id', id);
+    await broadcast('reventa-suppliers');
+    return { ok: true };
+  },
+
+  // ─── Reventa Items ────────────────────────────────────────────
+  getReventaItems: async () => {
+    const { data } = await supabase.from('reventa_items').select('*').order('created_at', { ascending: false });
+    return toClient(data ?? []);
+  },
+  createReventaItem: async (body: { name: string; salePrice: number; costPrice?: number | null; quantity: number; supplierId?: string }) => {
+    const { data, error } = await supabase.from('reventa_items').insert({
+      name: body.name,
+      sale_price: body.salePrice,
+      cost_price: body.costPrice ?? null,
+      quantity: body.quantity,
+      initial_quantity: body.quantity,
+      supplier_id: body.supplierId || null,
+    }).select().single();
+    if (error) throw new Error(error.message);
+    await broadcast('reventa-items');
+    return toClient(data);
+  },
+  updateReventaItem: async (id: string, body: any) => {
+    const { data } = await supabase.from('reventa_items').update(toDB(body)).eq('id', id).select().single();
+    await broadcast('reventa-items');
+    return toClient(data);
+  },
+  deleteReventaItem: async (id: string) => {
+    await supabase.from('reventa_items').delete().eq('id', id);
+    await broadcast('reventa-items');
     return { ok: true };
   },
 

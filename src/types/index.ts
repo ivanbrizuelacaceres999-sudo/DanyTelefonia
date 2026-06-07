@@ -123,7 +123,7 @@ export interface Sale {
   _id: string;
   items: {
     id: string;
-    type: 'product' | 'repair';
+    type: 'product' | 'repair' | 'reventa';
     name: string;
     price: number;
     cost: number;
@@ -187,4 +187,22 @@ export interface Stats {
   averageRepairTime: number;
   totalStockValue: number;
   profitByProduct: { name: string; profit: number }[];
+}
+
+export interface ReventaSupplier {
+  _id: string;
+  name: string;
+  contact?: string;
+  createdAt: string;
+}
+
+export interface ReventaItem {
+  _id: string;
+  name: string;
+  salePrice: number;
+  costPrice?: number | null;
+  quantity: number;
+  initialQuantity: number;
+  supplierId?: string;
+  createdAt: string;
 }
