@@ -373,65 +373,121 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
         </Modal>
       )}
 
-      {/* Modal: Historial de pagos del mayorista */}
+      {/* Modal: Historial de pagos — bottom sheet en móvil, modal centrado en desktop */}
       {historyWholesaler && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setHistoryWholesaler(null)}>
-          <div className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Historial de Pagos</p>
-                <h3 className="text-xl font-black text-gray-800">{historyWholesaler.name}</h3>
-                <p className="text-sm font-bold text-gray-400">
-                  Deuda actual: <span className={historyWholesaler.debt > 0 ? "text-red-500" : "text-emerald-500"}>
-                    Gs. {historyWholesaler.debt.toLocaleString()}
-                  </span>
-                </p>
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            onClick={() => setHistoryWholesaler(null)}
+          />
+
+          {/* Contenedor: anclado abajo en móvil, centrado en desktop */}
+          <div className="fixed inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center md:p-4 z-50 pointer-events-none">
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="bg-white rounded-t-[32px] md:rounded-[32px] w-full md:max-w-md flex flex-col shadow-2xl overflow-hidden pointer-events-auto"
+              style={{ maxHeight: '90vh' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Handle — solo móvil */}
+              <div className="flex justify-center pt-3 pb-1 md:hidden flex-shrink-0">
+                <div className="w-10 h-1 bg-gray-200 rounded-full" />
               </div>
-              <button onClick={() => setHistoryWholesaler(null)} className="p-2 text-gray-300 hover:text-gray-600 transition-colors">
-                <X size={22} />
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto space-y-3">
-              {((historyWholesaler as any).paymentHistory ?? []).length === 0 ? (
-                <div className="text-center py-12 text-gray-300">
-                  <History size={36} className="mx-auto mb-3" />
-                  <p className="font-black uppercase tracking-widest text-sm">Sin pagos registrados</p>
-                </div>
-              ) : (
-                [...((historyWholesaler as any).paymentHistory ?? [])].reverse().map((p: any, i: number) => (
-                  <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        {new Date(p.date).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                        {' '}·{' '}
-                        {new Date(p.date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <span className="text-sm font-black text-emerald-600">+Gs. {p.amount.toLocaleString()}</span>
+              {/* Header */}
+              <div className="px-6 pt-3 md:pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
+                      Historial de Pagos
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xl font-black text-gray-800 leading-tight">{historyWholesaler.name}</h3>
+                      {(historyWholesaler as any).code && (
+                        <span className="text-[9px] font-black px-2 py-0.5 bg-gray-800 text-white rounded-lg tracking-widest shrink-0">
+                          #{(historyWholesaler as any).code}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-gray-400">Deuda restante después</span>
-                      <span className={`text-sm font-black ${p.remainingDebt > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                        Gs. {p.remainingDebt.toLocaleString()}
-                        {p.remainingDebt === 0 && ' ✓'}
-                      </span>
+                    <div className={cn(
+                      "inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full text-xs font-black",
+                      historyWholesaler.debt > 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+                    )}>
+                      <Wallet size={11} />
+                      Deuda: Gs. {historyWholesaler.debt.toLocaleString()}
                     </div>
-                    {p.note && (
-                      <p className="text-[10px] font-bold text-gray-400 mt-1 italic">"{p.note}"</p>
-                    )}
                   </div>
-                ))
-              )}
-            </div>
+                  <button
+                    onClick={() => setHistoryWholesaler(null)}
+                    className="p-2 text-gray-300 hover:text-gray-600 transition-colors ml-3 flex-shrink-0 mt-1"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
 
-            <button onClick={() => setHistoryWholesaler(null)}
-              className="mt-4 w-full py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-colors">
-              Cerrar
-            </button>
+              {/* Lista de pagos */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {((historyWholesaler as any).paymentHistory ?? []).length === 0 ? (
+                  <div className="text-center py-16 text-gray-300">
+                    <History size={40} className="mx-auto mb-3" />
+                    <p className="font-black uppercase tracking-widest text-sm">Sin pagos registrados</p>
+                    <p className="text-[10px] font-bold text-gray-300 mt-1">Los pagos aparecerán aquí</p>
+                  </div>
+                ) : (
+                  [...((historyWholesaler as any).paymentHistory ?? [])].reverse().map((p: any, i: number) => (
+                    <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                      {/* Fila superior: ícono + fecha/hora + monto */}
+                      <div className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <DollarSign size={15} className="text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-black text-gray-700">
+                              {new Date(p.date).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </p>
+                            <p className="text-[10px] font-bold text-gray-400">
+                              {new Date(p.date).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-base font-black text-emerald-600">
+                          +Gs. {p.amount.toLocaleString()}
+                        </span>
+                      </div>
+                      {/* Fila inferior: deuda restante */}
+                      <div className="flex items-center justify-between bg-gray-50 border-t border-gray-100 px-4 py-2.5">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Deuda restante</span>
+                        <span className={cn("text-sm font-black", p.remainingDebt > 0 ? "text-red-500" : "text-emerald-600")}>
+                          Gs. {p.remainingDebt.toLocaleString()}{p.remainingDebt === 0 && ' ✓'}
+                        </span>
+                      </div>
+                      {p.note && (
+                        <div className="px-4 pb-3 pt-2 border-t border-gray-50">
+                          <p className="text-[10px] font-bold text-gray-400 italic">"{p.note}"</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 pb-6 border-t border-gray-100 flex-shrink-0">
+                <button
+                  onClick={() => setHistoryWholesaler(null)}
+                  className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
+        </>
       )}
 
       {pendingConfirm && (
