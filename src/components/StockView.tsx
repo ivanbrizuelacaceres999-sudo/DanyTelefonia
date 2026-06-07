@@ -571,7 +571,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
         <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
         <input
           type="text"
-          placeholder={selectedCategoryId ? "Buscar productos..." : "Buscar categorías..."}
+          placeholder="Buscar productos en todo el inventario..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="w-full bg-white border border-gray-100 rounded-[30px] py-4 sm:py-6 pl-12 sm:pl-16 pr-6 sm:pr-8 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700"
@@ -613,8 +613,8 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
       )}
 
       <AnimatePresence mode="wait">
-        {!selectedCategoryId ? (
-          <motion.div 
+        {!selectedCategoryId && !searchTerm ? (
+          <motion.div
             key="categories"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -700,7 +700,13 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                     </div>
 
                     <h3 className="text-lg sm:text-2xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-indigo-600 transition-colors">{p.model}</h3>
-                    <div className="flex items-center gap-2 mb-6">
+                    <div className="flex items-center gap-2 mb-6 flex-wrap">
+                      {/* Categoría — solo visible en búsqueda global */}
+                      {!selectedCategoryId && searchTerm && (
+                        <span className="text-[10px] font-black px-3 py-1 bg-violet-50 text-violet-600 rounded-full uppercase tracking-widest flex items-center gap-1">
+                          <Tag size={10} /> {categories.find(c => c._id === p.categoryId)?.name ?? '—'}
+                        </span>
+                      )}
                       {isLowStock && (
                         <span className="text-[10px] font-black px-3 py-1 bg-red-100 text-red-600 rounded-full uppercase tracking-widest flex items-center gap-1">
                           <AlertTriangle size={10} /> En Falta
