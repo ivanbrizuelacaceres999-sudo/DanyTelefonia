@@ -101,19 +101,23 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
   const [paymentNote, setPaymentNote] = useState('');
   const [historyWholesaler, setHistoryWholesaler] = useState<Wholesaler | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newWholesaler, setNewWholesaler] = useState({ name: '', businessName: '', contact: '', debt: '' });
+  const [newWholesaler, setNewWholesaler] = useState({ code: '', name: '', businessName: '', contact: '', debt: '' });
   const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
-  const filteredWholesalers = wholesalers.filter(w =>
-    w.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    w.businessName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredWholesalers = wholesalers.filter(w => {
+    const q = searchTerm.toLowerCase();
+    return (
+      w.name.toLowerCase().includes(q) ||
+      w.businessName?.toLowerCase().includes(q) ||
+      w.code?.toLowerCase().includes(q)
+    );
+  });
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createWholesaler({ ...newWholesaler, debt: parseInt(newWholesaler.debt) || 0 });
+    await api.createWholesaler({ ...newWholesaler, code: newWholesaler.code.trim().toUpperCase() || null, debt: parseInt(newWholesaler.debt) || 0 });
     setIsAdding(false);
-    setNewWholesaler({ name: '', businessName: '', contact: '', debt: '' });
+    setNewWholesaler({ code: '', name: '', businessName: '', contact: '', debt: '' });
     onRefresh();
   };
 
@@ -180,7 +184,7 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
 
       <div className="relative group">
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={22} />
-        <input type="text" placeholder="Buscar por nombre o local..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+        <input type="text" placeholder="Buscar por nombre, local o código..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
           className="w-full bg-white border border-gray-100 rounded-[30px] py-6 pl-16 pr-8 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700" />
       </div>
 
@@ -200,7 +204,14 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
                 </div>
               </div>
 
-              <h3 className="text-xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-indigo-600 transition-colors">{w.name}</h3>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h3 className="text-xl font-black text-gray-800 tracking-tight group-hover:text-indigo-600 transition-colors">{w.name}</h3>
+                {w.code && (
+                  <span className="text-[9px] font-black px-2 py-0.5 bg-gray-800 text-white rounded-lg tracking-widest uppercase">
+                    #{w.code}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2 mb-5">
                 {w.businessName && (
                   <span className="text-[10px] font-black px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full uppercase tracking-widest">{w.businessName}</span>
@@ -254,6 +265,15 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
           <form onSubmit={handleAdd} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Código <span className="font-bold normal-case text-gray-300">(opcional)</span></label>
+                <input
+                  value={newWholesaler.code}
+                  onChange={e => setNewWholesaler({ ...newWholesaler, code: e.target.value })}
+                  placeholder="Ej: MAY001, DIST-02…"
+                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-black tracking-widest uppercase"
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Nombre *</label>
                 <input required value={newWholesaler.name} onChange={e => setNewWholesaler({ ...newWholesaler, name: e.target.value })}
                   className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-bold" />
@@ -284,6 +304,15 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
         <Modal title="Editar Mayorista" onClose={() => setEditingWholesaler(null)}>
           <form onSubmit={handleUpdate} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Código <span className="font-bold normal-case text-gray-300">(opcional)</span></label>
+                <input
+                  value={editingWholesaler.code || ''}
+                  onChange={e => setEditingWholesaler({ ...editingWholesaler, code: e.target.value })}
+                  placeholder="Ej: MAY001, DIST-02…"
+                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-black tracking-widest uppercase"
+                />
+              </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Nombre *</label>
                 <input required value={editingWholesaler.name} onChange={e => setEditingWholesaler({ ...editingWholesaler, name: e.target.value })}

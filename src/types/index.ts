@@ -33,6 +33,7 @@ export interface Category {
 
 export interface Wholesaler {
   _id: string;
+  code?: string;
   name: string;
   businessName?: string;
   contact?: string;
