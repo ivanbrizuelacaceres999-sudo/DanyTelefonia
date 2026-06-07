@@ -128,7 +128,7 @@ const RepairFormComponent = ({
       {/* ── MODO CREACIÓN: todos los campos ── */}
       {!isEdit && (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-3">Cliente</label>
               <input required value={f.customerName} onChange={e => setF(p => ({ ...p, customerName: e.target.value }))}
@@ -139,7 +139,7 @@ const RepairFormComponent = ({
               <input required value={f.customerPhone} onChange={e => setF(p => ({ ...p, customerPhone: e.target.value }))}
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-bold" />
             </div>
-            <div className="col-span-2 space-y-2">
+            <div className="col-span-full space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-3">Modelo del equipo</label>
               <input required value={f.deviceModel} onChange={e => setF(p => ({ ...p, deviceModel: e.target.value }))}
                 className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-bold" />
@@ -695,19 +695,20 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
           return (
             <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} key={r._id}
               className={cn(
-                "p-6 rounded-[35px] shadow-sm border hover:shadow-xl transition-all group relative overflow-hidden",
+                "p-4 sm:p-6 rounded-[24px] sm:rounded-[35px] shadow-sm border hover:shadow-xl transition-all group relative overflow-hidden",
                 r.isWarranty
                   ? "bg-red-50 border-red-200"
                   : "bg-white border-gray-100"
               )}>
               <div className="flex justify-between items-start mb-5">
-                <div className="flex gap-3">
-                  <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                    <Smartphone size={28} />
+                <div className="flex gap-3 min-w-0 flex-1">
+                  <div className="w-11 h-11 sm:w-14 sm:h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
+                    <Smartphone size={22} className="sm:hidden" />
+                    <Smartphone size={28} className="hidden sm:block" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xl font-black text-gray-800 group-hover:text-indigo-600 transition-colors">{r.deviceModel}</h3>
+                      <h3 className="text-base sm:text-xl font-black text-gray-800 group-hover:text-indigo-600 transition-colors leading-snug">{r.deviceModel}</h3>
                       {r.isWarranty && (
                         <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 bg-red-500 text-white rounded-full uppercase tracking-widest">
                           <ShieldAlert size={9} /> GARANTÍA
@@ -777,7 +778,7 @@ export const RepairsView = ({ repairs, products, onRefresh, users = [] }: Repair
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Problema</p>
                   <p className="text-sm font-bold text-gray-600 bg-gray-50 p-2.5 rounded-xl leading-snug">{r.problemDescription}</p>

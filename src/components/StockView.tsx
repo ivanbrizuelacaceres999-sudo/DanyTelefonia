@@ -568,13 +568,13 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
       {mainTab === 'stock' && (<>
 
       <div className="relative group">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={22} />
+        <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
         <input
           type="text"
           placeholder={selectedCategoryId ? "Buscar productos..." : "Buscar categorías..."}
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full bg-white border border-gray-100 rounded-[30px] py-6 pl-16 pr-8 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700"
+          className="w-full bg-white border border-gray-100 rounded-[30px] py-4 sm:py-6 pl-12 sm:pl-16 pr-6 sm:pr-8 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700"
         />
       </div>
 
@@ -629,7 +629,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                   whileHover={{ y: -5 }}
                   key={c._id} 
                   onClick={() => setSelectedCategoryId(c._id)}
-                  className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden"
+                  className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden"
                 >
                   <div className="flex justify-between items-start mb-6">
                     <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -639,7 +639,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                       {totalItems} Modelos
                     </span>
                   </div>
-                  <h3 className="text-2xl font-black text-gray-800 mb-4 tracking-tight">{c.name}</h3>
+                  <h3 className="text-xl sm:text-2xl font-black text-gray-800 mb-3 sm:mb-4 tracking-tight">{c.name}</h3>
                   
                   {lowStock > 0 && (
                     <div className="flex items-center gap-2 text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">
@@ -667,7 +667,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                 <motion.div 
                   layout
                   key={p._id} 
-                  className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all group relative overflow-hidden"
+                  className="bg-white p-4 sm:p-7 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all group relative overflow-hidden"
                 >
                   <div className="relative">
                     <div className="flex justify-between items-start mb-6">
@@ -683,23 +683,23 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                             setRestockingProduct(p);
                             setRestockData({ quantity: '', costPrice: String(p.costPrice) });
                           }}
-                          className="p-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"
+                          className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"
                           title="Reponer Stock"
                         >
                           <RefreshCw size={18} />
                         </button>
                         <button
                           onClick={() => { setPrintModal(p); setPrintQty(String(p.quantity || 1)); setPrintWithBarcode(!!p.barcode); }}
-                          className="p-3 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all shadow-sm"
+                          className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all shadow-sm"
                           title="Imprimir etiquetas">
                           <Printer size={18} />
                         </button>
-                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); }} className="p-3 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"><Edit2 size={18} /></button>
-                        <button onClick={() => handleDelete(p._id)} className="p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
+                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); }} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                        <button onClick={() => handleDelete(p._id)} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                       </div>
                     </div>
 
-                    <h3 className="text-2xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-indigo-600 transition-colors">{p.model}</h3>
+                    <h3 className="text-lg sm:text-2xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-indigo-600 transition-colors">{p.model}</h3>
                     <div className="flex items-center gap-2 mb-6">
                       {isLowStock && (
                         <span className="text-[10px] font-black px-3 py-1 bg-red-100 text-red-600 rounded-full uppercase tracking-widest flex items-center gap-1">
@@ -783,7 +783,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
               </div>
 
               {/* ── Precios adicionales ── */}
-              <div className="col-span-2 space-y-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <div className="col-span-full space-y-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   Precios adicionales <span className="font-bold normal-case text-gray-300">(opcionales — dejá en 0 si no usás)</span>
                 </p>
@@ -803,7 +803,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                 </div>
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 flex items-center gap-1.5">
                   <MapPin size={11} className="text-indigo-400" /> Ubicación en Estante
                 </label>
@@ -837,7 +837,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                   </div>
                 </div>
               </div>
-              <div className="space-y-2 col-span-2">
+              <div className="space-y-2 col-span-full">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Código de Barras (EAN-13)</label>
                 <div className="relative">
                   <Scan className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -1039,7 +1039,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
               </div>
 
               {/* ── Precios adicionales ── */}
-              <div className="col-span-2 space-y-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <div className="col-span-full space-y-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                   Precios adicionales <span className="font-bold normal-case text-gray-300">(opcionales)</span>
                 </p>
@@ -1059,7 +1059,7 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                 </div>
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 flex items-center gap-1.5">
                   <MapPin size={11} className="text-indigo-400" /> Ubicación en Estante
                 </label>
