@@ -883,16 +883,16 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
         </div>
 
         {/* Forma de pago */}
-        <div className="space-y-1.5 shrink-0 w-52">
-          <div className="flex items-center justify-between">
+        <div className="space-y-1.5 shrink-0 w-56">
+          <div className="flex items-center gap-2">
             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Forma de Pago</label>
             <button onClick={addPaymentRow} className="text-[9px] font-black text-indigo-500 hover:text-indigo-700 cursor-pointer">+ pago</button>
           </div>
           <div className="space-y-1.5">
             {payments.map((p, idx) => (
-              <div key={idx} className="flex gap-1 items-center">
+              <div key={idx} className="flex gap-1 items-center min-w-0">
                 <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
-                  className="w-24 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold text-gray-700 outline-none focus:border-indigo-400 cursor-pointer">
+                  className="w-24 shrink-0 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold text-gray-700 outline-none focus:border-indigo-400 cursor-pointer">
                   <option value="cash">Efectivo</option>
                   <option value="credit_card">T. Crédito</option>
                   <option value="debit_card">T. Débito</option>
@@ -902,7 +902,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
                 </select>
                 <NumericInput value={p.amount} placeholder="Monto"
                   onChange={raw => updatePayment(idx, 'amount', raw)}
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+                  className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
                 {payments.length > 1 && (
                   <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer shrink-0"><Trash2 size={11} /></button>
                 )}
