@@ -888,24 +888,26 @@ export const CashierView = ({ user, products, repairs, wholesalers, onRefresh, s
             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Forma de Pago</label>
             <button onClick={addPaymentRow} className="text-[9px] font-black text-indigo-500 hover:text-indigo-700 cursor-pointer">+ pago</button>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {payments.map((p, idx) => (
-              <div key={idx} className="flex gap-1 items-center min-w-0">
-                <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
-                  className="w-24 shrink-0 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold text-gray-700 outline-none focus:border-indigo-400 cursor-pointer">
-                  <option value="cash">Efectivo</option>
-                  <option value="credit_card">T. Crédito</option>
-                  <option value="debit_card">T. Débito</option>
-                  <option value="transfer">Transfer.</option>
-                  <option value="qr">QR</option>
-                  <option value="credit">Cta. May.</option>
-                </select>
+              <div key={idx} className="flex flex-col gap-1">
+                <div className="flex gap-1 items-center">
+                  <select value={p.method} onChange={e => updatePayment(idx, 'method', e.target.value)}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-xs font-bold text-gray-700 outline-none focus:border-indigo-400 cursor-pointer">
+                    <option value="cash">Efectivo</option>
+                    <option value="credit_card">T. Crédito</option>
+                    <option value="debit_card">T. Débito</option>
+                    <option value="transfer">Transfer.</option>
+                    <option value="qr">QR</option>
+                    <option value="credit">Cta. May.</option>
+                  </select>
+                  {payments.length > 1 && (
+                    <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer shrink-0"><Trash2 size={11} /></button>
+                  )}
+                </div>
                 <NumericInput value={p.amount} placeholder="Monto"
                   onChange={raw => updatePayment(idx, 'amount', raw)}
-                  className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
-                {payments.length > 1 && (
-                  <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer shrink-0"><Trash2 size={11} /></button>
-                )}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
               </div>
             ))}
           </div>
