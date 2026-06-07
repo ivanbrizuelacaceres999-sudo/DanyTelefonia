@@ -8,7 +8,7 @@ import {
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { api } from '../api';
-import { Product, Repair, Wholesaler, Sale, CashSession, UserProfile, CashWithdrawal, WithdrawalMotive, ReventaItem } from '../types';
+import { Product, Repair, Wholesaler, Sale, CashSession, UserProfile, CashWithdrawal, WithdrawalMotive, ReventaItem, ReventaSupplier } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { cn } from '../lib/utils';
@@ -19,6 +19,7 @@ interface CashierViewProps {
   repairs: Repair[];
   wholesalers: Wholesaler[];
   reventaItems?: ReventaItem[];
+  reventaSuppliers?: ReventaSupplier[];
   onRefresh: () => void;
   scanProduct?: Product | null;
   onScanHandled?: () => void;
@@ -41,6 +42,8 @@ interface CartItem {
   cost: number;
   quantity: number;
   priceType?: PriceType;
+  supplierId?: string;
+  isNew?: boolean;
 }
 
 const METHOD_LABEL: Record<string, string> = {
@@ -174,7 +177,7 @@ const printTicket = (sale: Sale) => {
   }, 400);
 };
 
-export const CashierView = ({ user, products, repairs, wholesalers, reventaItems = [], onRefresh, scanProduct, onScanHandled }: CashierViewProps) => {
+export const CashierView = ({ user, products, repairs, wholesalers, reventaItems = [], reventaSuppliers = [], onRefresh, scanProduct, onScanHandled }: CashierViewProps) => {
   const [session, setSession] = useState<CashSession | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [isOpeningSession, setIsOpeningSession] = useState(false);
@@ -253,7 +256,8 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   const [addModal, setAddModal] = useState<{
     type: 'product'; product: Product;
     qty: string; priceType: PriceType;
-  } | { type: 'repair'; repair: Repair } | { type: 'reventa'; item: ReventaItem; qty: string } | null>(null);
+  } | { type: 'repair'; repair: Repair } | { type: 'reventa'; item: ReventaItem; qty: string }
+    | { type: 'new-reventa'; name: string; salePrice: string; costPrice: string; supplierId: string; qty: string } | null>(null);
 
   const loadSession = async () => {
     setLoadingSession(true);
@@ -377,7 +381,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
       const paymentMethod = paymentsData.length === 1 ? paymentsData[0].method : 'mixed';
 
       const sale = await api.createSale({
-        items: cart.map(i => ({ id: i.id, type: i.type, name: i.name, price: i.price, cost: i.cost, quantity: i.quantity })),
+        items: cart.map(i => ({ id: i.isNew ? '' : i.id, type: i.type, name: i.name, price: i.price, cost: i.cost, quantity: i.quantity, supplierId: i.supplierId })),
         total,
         costTotal: cart.reduce((acc, i) => acc + n(i.cost) * i.quantity, 0),
         discount: discountN,
@@ -470,6 +474,25 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   // ── Agregar producto desde modal ─────────────────────────────────
   const addFromModal = () => {
     if (!addModal) return;
+    if (addModal.type === 'new-reventa') {
+      const qty = Math.max(1, parseInt(addModal.qty) || 1);
+      const salePrice = parseInt(addModal.salePrice.replace(/\D/g, '')) || 0;
+      if (!addModal.name.trim() || salePrice === 0) return;
+      const costPrice = parseInt(addModal.costPrice.replace(/\D/g, '')) || 0;
+      setCart(prev => [...prev, {
+        id: `__rev__${Date.now()}`,
+        type: 'reventa' as const,
+        name: addModal.name.trim(),
+        price: salePrice,
+        cost: costPrice,
+        quantity: qty,
+        supplierId: addModal.supplierId || undefined,
+        isNew: true,
+      }]);
+      setAddModal(null); setErrorMsg('');
+      if (window.innerWidth < 768) setMobileView('ticket');
+      return;
+    }
     if (addModal.type === 'reventa') {
       const r = addModal.item;
       const quantity = Math.max(1, parseInt(addModal.qty) || 1);
@@ -664,7 +687,14 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         )}>
           <div className="px-5 py-3 flex items-center justify-between shrink-0">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Catalogo</p>
-            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{catalogItems.length}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAddModal({ type: 'new-reventa', name: '', salePrice: '', costPrice: '', supplierId: '', qty: '1' })}
+                className="text-[10px] font-black text-orange-500 bg-orange-50 hover:bg-orange-100 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-colors cursor-pointer border border-orange-200">
+                <Plus size={10} /> Reventa
+              </button>
+              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{catalogItems.length}</span>
+            </div>
           </div>
           <div className="overflow-y-auto flex-1 px-4 pb-4">
             {catalogItems.length === 0 ? (
@@ -1015,7 +1045,67 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md"
             onClick={e => e.stopPropagation()}>
 
-            {addModal.type === 'reventa' ? (
+            {addModal.type === 'new-reventa' ? (
+              <div className="space-y-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600"><ShoppingBag size={28} /></div>
+                  <div>
+                    <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Agregar al ticket</p>
+                    <h3 className="text-xl font-black text-gray-800">Nueva Reventa</h3>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Nombre <span className="text-red-400">*</span></label>
+                  <input type="text" value={addModal.name} placeholder="Nombre del producto"
+                    autoFocus
+                    onChange={e => setAddModal(prev => prev?.type === 'new-reventa' ? { ...prev, name: e.target.value } : prev)}
+                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Precio Venta <span className="text-red-400">*</span></label>
+                    <NumericInput value={addModal.salePrice} placeholder="0"
+                      onChange={raw => setAddModal(prev => prev?.type === 'new-reventa' ? { ...prev, salePrice: raw } : prev)}
+                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Costo (opc.)</label>
+                    <NumericInput value={addModal.costPrice} placeholder="0"
+                      onChange={raw => setAddModal(prev => prev?.type === 'new-reventa' ? { ...prev, costPrice: raw } : prev)}
+                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-gray-300 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad</p>
+                  <div className="flex items-center justify-center gap-4 bg-gray-50 rounded-2xl py-3">
+                    <button onClick={() => setAddModal(prev => prev?.type === 'new-reventa' ? { ...prev, qty: String(Math.max(1, parseInt(prev.qty || '1') - 1)) } : prev)}
+                      className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all cursor-pointer text-lg">-</button>
+                    <span className="text-4xl font-black text-gray-800 w-12 text-center">{addModal.qty || '1'}</span>
+                    <button onClick={() => setAddModal(prev => prev?.type === 'new-reventa' ? { ...prev, qty: String(parseInt(prev.qty || '1') + 1) } : prev)}
+                      className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-orange-500 hover:bg-orange-50 shadow-sm transition-all cursor-pointer text-lg">+</button>
+                  </div>
+                </div>
+                {reventaSuppliers.length > 0 && (
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Proveedor (opc.)</label>
+                    <select value={addModal.supplierId}
+                      onChange={e => setAddModal(prev => prev?.type === 'new-reventa' ? { ...prev, supplierId: e.target.value } : prev)}
+                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all cursor-pointer">
+                      <option value="">Sin proveedor</option>
+                      {reventaSuppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <button onClick={() => setAddModal(null)} className="flex-1 py-3 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">Cancelar</button>
+                  <button onClick={addFromModal}
+                    disabled={!addModal.name.trim() || !(parseInt(addModal.salePrice.replace(/\D/g, '')) > 0)}
+                    className="flex-1 py-3 rounded-2xl bg-orange-500 text-white font-black hover:bg-orange-600 shadow-xl shadow-orange-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <Plus size={16} /> Agregar al ticket
+                  </button>
+                </div>
+              </div>
+            ) : addModal.type === 'reventa' ? (
               <div className="space-y-5">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600"><ShoppingBag size={28} /></div>

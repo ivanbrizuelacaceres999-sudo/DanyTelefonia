@@ -272,7 +272,7 @@ function App() {
       case 'dashboard':     return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
       case 'stock':         return <StockView products={products} categories={categories} onRefresh={fetchData} />;
       case 'repairs':       return <RepairsView repairs={repairs} products={products} onRefresh={fetchData} users={users} />;
-      case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
+      case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
       case 'reventas':      return <ReventasView reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} />;
       case 'wholesale':     return <WholesaleView wholesalers={wholesalers} onRefresh={fetchData} />;
       case 'history':       return <HistoryView sales={sales} fixedCosts={fixedCosts} repairs={repairs} products={products} user={user} onRefresh={fetchData} />;

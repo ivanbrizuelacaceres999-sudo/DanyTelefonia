@@ -454,12 +454,23 @@ export const api = {
         if (prod) await supabase.from('products').update({ quantity: (prod.quantity ?? 0) - (item.quantity ?? 1) }).eq('id', item.id);
       }
 
-      if (item.type === 'reventa' && item.id) {
-        const { data: ritem } = await supabase.from('reventa_items').select('quantity').eq('id', item.id).single();
-        if (ritem) {
-          await supabase.from('reventa_items').update({
-            quantity: Math.max(0, (ritem.quantity ?? 0) - (item.quantity ?? 1)),
-          }).eq('id', item.id);
+      if (item.type === 'reventa') {
+        if (item.id) {
+          const { data: ritem } = await supabase.from('reventa_items').select('quantity').eq('id', item.id).single();
+          if (ritem) {
+            await supabase.from('reventa_items').update({
+              quantity: Math.max(0, (ritem.quantity ?? 0) - (item.quantity ?? 1)),
+            }).eq('id', item.id);
+          }
+        } else {
+          await supabase.from('reventa_items').insert({
+            name: item.name,
+            sale_price: item.price,
+            cost_price: item.cost || null,
+            quantity: 0,
+            initial_quantity: item.quantity ?? 1,
+            supplier_id: item.supplierId || null,
+          });
         }
       }
 
