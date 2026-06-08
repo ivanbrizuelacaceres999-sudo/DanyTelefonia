@@ -530,7 +530,7 @@ export const api = {
       }).eq('id', session.id);
     }
 
-    // Garantías automáticas por categoría
+    // Garantías automáticas por categoría / tipo
     for (const item of body.items ?? []) {
       if (item.type === 'product' && item.id) {
         try {
@@ -551,6 +551,24 @@ export const api = {
               amount: item.price * (item.quantity ?? 1),
             });
           }
+        } catch { /* no interrumpir la venta */ }
+      }
+
+      if (item.type === 'reventa') {
+        try {
+          const warrantyDays = 2;
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + warrantyDays);
+          await supabase.from('warranties').insert({
+            sale_id: sale.id,
+            product_name: item.name,
+            customer_name: body.customerName ?? 'Consumidor Final',
+            date: new Date().toISOString(),
+            expires_at: expiresAt.toISOString(),
+            warranty_days: warrantyDays,
+            status: 'active',
+            amount: item.price * (item.quantity ?? 1),
+          });
         } catch { /* no interrumpir la venta */ }
       }
     }
