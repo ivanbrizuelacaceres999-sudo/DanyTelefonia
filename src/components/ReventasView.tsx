@@ -26,8 +26,8 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
   const [form, setForm] = useState({ name: '', salePrice: '', costPrice: '', quantity: '1', supplierId: '' });
   const [supplierForm, setSupplierForm] = useState({ name: '', contact: '' });
   const [saving, setSaving] = useState(false);
-  const [editingCost, setEditingCost] = useState<string | null>(null);
-  const [editCostValue, setEditCostValue] = useState('');
+  const [editingItem, setEditingItem] = useState<ReventaItem | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', salePrice: '', costPrice: '', supplierId: '' });
 
   const displayItems = filterSupplier
     ? reventaItems.filter(i => i.supplierId === filterSupplier)
@@ -84,10 +84,31 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
     onRefresh();
   };
 
-  const handleSaveCost = async (id: string) => {
-    await (api as any).updateReventaItem(id, { costPrice: parseInt(editCostValue) || null });
-    setEditingCost(null);
-    onRefresh();
+  const openEdit = (item: ReventaItem) => {
+    setEditingItem(item);
+    setEditForm({
+      name: item.name,
+      salePrice: String(item.salePrice),
+      costPrice: item.costPrice ? String(item.costPrice) : '',
+      supplierId: item.supplierId ?? '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+    setSaving(true);
+    try {
+      await (api as any).updateReventaItem(editingItem._id, {
+        name: editForm.name.trim() || editingItem.name,
+        salePrice: parseInt(editForm.salePrice.replace(/\D/g, '')) || editingItem.salePrice,
+        costPrice: editForm.costPrice ? parseInt(editForm.costPrice.replace(/\D/g, '')) : null,
+        supplierId: editForm.supplierId || null,
+      });
+      setEditingItem(null);
+      onRefresh();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const supplierMap = Object.fromEntries(reventaSuppliers.map(s => [s._id, s.name]));
@@ -176,7 +197,7 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
           ) : (
             <div className="bg-white rounded-3xl border border-gray-100 overflow-x-auto">
               {/* Header */}
-              <div className="grid grid-cols-[2fr_1fr_repeat(5,auto)_32px] gap-4 px-5 py-3 border-b border-gray-100 bg-gray-50 min-w-[700px]">
+              <div className="grid grid-cols-[2fr_1fr_repeat(5,auto)_auto] gap-4 px-5 py-3 border-b border-gray-100 bg-gray-50 min-w-[700px]">
                 {['Producto', 'Proveedor', 'Comprado', 'Vendido', 'Disponible', 'Costo', 'Venta / Gan.', ''].map(h => (
                   <p key={h} className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{h}</p>
                 ))}
@@ -187,7 +208,7 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
                 const ganancia = (n(item.salePrice) - n(item.costPrice)) * sold;
                 return (
                   <div key={item._id}
-                    className="grid grid-cols-[2fr_1fr_repeat(5,auto)_32px] gap-4 px-5 py-4 border-b border-gray-100 last:border-0 items-center hover:bg-gray-50/50 transition-colors min-w-[700px]">
+                    className="grid grid-cols-[2fr_1fr_repeat(5,auto)_auto] gap-4 px-5 py-4 border-b border-gray-100 last:border-0 items-center hover:bg-gray-50/50 transition-colors min-w-[700px]">
 
                     <div>
                       <p className="font-black text-gray-800 text-sm">{item.name}</p>
@@ -211,25 +232,12 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
                       )}
                     </div>
 
-                    {/* Costo — editable inline */}
+                    {/* Costo — solo lectura, editar desde modal */}
                     <div>
-                      {editingCost === item._id ? (
-                        <div className="flex items-center gap-1">
-                          <NumericInput value={editCostValue} onChange={raw => setEditCostValue(raw)}
-                            className="w-24 bg-orange-50 border border-orange-300 rounded-lg py-1 px-1.5 text-xs font-black text-orange-700 outline-none text-center" />
-                          <button onClick={() => handleSaveCost(item._id)} className="text-emerald-600 hover:text-emerald-700 cursor-pointer"><Check size={13} /></button>
-                          <button onClick={() => setEditingCost(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={13} /></button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => { setEditingCost(item._id); setEditCostValue(item.costPrice ? String(item.costPrice) : ''); }}
-                          className={cn('flex items-center gap-1 cursor-pointer group', item.costPrice ? 'text-gray-700' : 'text-gray-300')}>
-                          <span className="text-xs font-black">
-                            {item.costPrice ? `Gs. ${n(item.costPrice).toLocaleString()}` : 'Sin costo'}
-                          </span>
-                          <Edit2 size={10} className="opacity-0 group-hover:opacity-60 transition-opacity text-orange-400" />
-                        </button>
-                      )}
+                      {item.costPrice
+                        ? <p className="text-xs font-black text-gray-700">Gs. {n(item.costPrice).toLocaleString()}</p>
+                        : <span className="text-xs font-bold text-gray-300 italic">Sin costo</span>
+                      }
                     </div>
 
                     <div>
@@ -241,10 +249,19 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
                       )}
                     </div>
 
-                    <button onClick={() => handleDelete(item._id)}
-                      className="text-gray-300 hover:text-red-500 cursor-pointer transition-colors">
-                      <Trash2 size={14} />
-                    </button>
+                    {/* Acciones: editar siempre, eliminar solo si no se vendió nada */}
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => openEdit(item)}
+                        className="text-gray-300 hover:text-orange-500 cursor-pointer transition-colors" title="Editar">
+                        <Edit2 size={14} />
+                      </button>
+                      {sold === 0 && (
+                        <button onClick={() => handleDelete(item._id)}
+                          className="text-gray-300 hover:text-red-500 cursor-pointer transition-colors" title="Eliminar">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -257,7 +274,7 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
                   return s + (n(i.salePrice) - n(i.costPrice)) * sold;
                 }, 0);
                 return (
-                  <div className="grid grid-cols-[2fr_1fr_repeat(5,auto)_32px] gap-4 px-5 py-3 bg-orange-50/60 border-t-2 border-orange-100 min-w-[700px]">
+                  <div className="grid grid-cols-[2fr_1fr_repeat(5,auto)_auto] gap-4 px-5 py-3 bg-orange-50/60 border-t-2 border-orange-100 min-w-[700px]">
                     <p className="text-[9px] font-black text-orange-700 uppercase tracking-widest self-center">TOTALES</p>
                     <span />
                     <p className="text-sm font-black text-orange-700">{displayItems.reduce((s, i) => s + n(i.initialQuantity), 0)}</p>
@@ -433,6 +450,89 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: Editar Reventa */}
+      <AnimatePresence>
+        {editingItem && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setEditingItem(null)}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md"
+              onClick={e => e.stopPropagation()}>
+
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600">
+                    <Edit2 size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Editar reventa</p>
+                    <h3 className="text-lg font-black text-gray-800 leading-tight">{editingItem.name}</h3>
+                  </div>
+                </div>
+                <button onClick={() => setEditingItem(null)} className="p-2 text-gray-300 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all cursor-pointer">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Nombre</label>
+                  <input type="text" value={editForm.name}
+                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Precio de Venta</label>
+                    <NumericInput value={editForm.salePrice}
+                      onChange={raw => setEditForm(f => ({ ...f, salePrice: raw }))}
+                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm text-center transition-all" />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Precio de Costo</label>
+                    <NumericInput value={editForm.costPrice} placeholder="Opcional"
+                      onChange={raw => setEditForm(f => ({ ...f, costPrice: raw }))}
+                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm text-center transition-all" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Proveedor</label>
+                  <select value={editForm.supplierId}
+                    onChange={e => setEditForm(f => ({ ...f, supplierId: e.target.value }))}
+                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm cursor-pointer transition-all">
+                    <option value="">Sin proveedor</option>
+                    {reventaSuppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                  </select>
+                </div>
+
+                {editForm.costPrice && editForm.salePrice && (
+                  <div className="bg-orange-50 rounded-2xl p-4 flex items-center justify-between">
+                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Ganancia estimada</span>
+                    <span className={cn('font-black text-lg', (parseInt(editForm.salePrice) - parseInt(editForm.costPrice)) >= 0 ? 'text-emerald-600' : 'text-red-500')}>
+                      Gs. {(parseInt(editForm.salePrice.replace(/\D/g, '') || '0') - parseInt(editForm.costPrice.replace(/\D/g, '') || '0')).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setEditingItem(null)}
+                    className="flex-1 py-3.5 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">
+                    Cancelar
+                  </button>
+                  <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim()}
+                    className="flex-1 py-3.5 rounded-2xl bg-orange-500 text-white font-black shadow-xl shadow-orange-200 hover:bg-orange-600 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2">
+                    {saving ? 'Guardando...' : <><Check size={16} /> Guardar</>}
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}
