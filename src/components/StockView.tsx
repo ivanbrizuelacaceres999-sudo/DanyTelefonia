@@ -174,30 +174,33 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created = await api.createProduct({
-      ...newProduct,
-      location: formatLocation(newLoc.estante, newLoc.columna, newLoc.fila),
-    });
-    setIsAdding(false);
-    setNewProduct({ model: '', categoryId: selectedCategoryId || '', quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: '' });
-    setNewLoc({ estante: '', columna: '', fila: '' });
-    onRefresh();
+    try {
+      const created = await api.createProduct({
+        ...newProduct,
+        categoryId: newProduct.categoryId || null,
+        location: formatLocation(newLoc.estante, newLoc.columna, newLoc.fila),
+      });
+      setIsAdding(false);
+      setNewProduct({ model: '', categoryId: selectedCategoryId || '', quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: '' });
+      setNewLoc({ estante: '', columna: '', fila: '' });
+      onRefresh();
 
-    // ── Si la categoría es "del local", generar código e imprimir etiqueta ──
-    // El empleado carga el producto → automáticamente se genera el código
-    // de barras interno y se abre la ventana de impresión para pegarlo al artículo.
-    const cat = categories.find(c => c._id === newProduct.categoryId);
-    if ((cat as any)?.isLocal && created?._id) {
-      try {
-        const data = await api.generateBarcode(created._id);
-        if (data.barcode) {
-          setTimeout(() => {
-            setPrintModal({ ...created, barcode: data.barcode, model: newProduct.model, salePrice: newProduct.salePrice } as Product);
-            setPrintQty(String(newProduct.purchasedQuantity || 1));
-            setPrintWithBarcode(true);
-          }, 350);
-        }
-      } catch { /* Si falla la generación no interrumpimos el flujo */ }
+      // ── Si la categoría es "del local", generar código e imprimir etiqueta ──
+      const cat = categories.find(c => c._id === newProduct.categoryId);
+      if ((cat as any)?.isLocal && created?._id) {
+        try {
+          const data = await api.generateBarcode(created._id);
+          if (data.barcode) {
+            setTimeout(() => {
+              setPrintModal({ ...created, barcode: data.barcode, model: newProduct.model, salePrice: newProduct.salePrice } as Product);
+              setPrintQty(String(newProduct.purchasedQuantity || 1));
+              setPrintWithBarcode(true);
+            }, 350);
+          }
+        } catch { /* Si falla la generación no interrumpimos el flujo */ }
+      }
+    } catch (err: any) {
+      alert('Error al guardar el producto: ' + (err?.message ?? 'Error desconocido'));
     }
   };
 
@@ -770,22 +773,22 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Categoría</label>
-                <select required value={newProduct.categoryId} onChange={e => setNewProduct({...newProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
-                  <option value="">Seleccionar...</option>
+                <select value={newProduct.categoryId} onChange={e => setNewProduct({...newProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                  <option value="">Sin categoría</option>
                   {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Inicial</label>
-                <NumericInput required value={String(newProduct.purchasedQuantity ?? '')} onChange={raw => setNewProduct({...newProduct, purchasedQuantity: Number(raw) || 0, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput value={String(newProduct.purchasedQuantity ?? '')} onChange={raw => setNewProduct({...newProduct, purchasedQuantity: Number(raw) || 0, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Costo (Gs.)</label>
-                <NumericInput required value={String(newProduct.costPrice ?? '')} onChange={raw => setNewProduct({...newProduct, costPrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput value={String(newProduct.costPrice ?? '')} onChange={raw => setNewProduct({...newProduct, costPrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Normal · Cliente (Gs.)</label>
-                <NumericInput required value={String(newProduct.salePrice ?? '')} onChange={raw => setNewProduct({...newProduct, salePrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput value={String(newProduct.salePrice ?? '')} onChange={raw => setNewProduct({...newProduct, salePrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
 
               {/* ── Precios adicionales ── */}
