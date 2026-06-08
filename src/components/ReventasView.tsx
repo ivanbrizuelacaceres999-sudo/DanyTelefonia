@@ -97,10 +97,14 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
   const handleSaveEdit = async () => {
     if (!editingItem) return;
     setSaving(true);
+    const wasSold = (editingItem.initialQuantity ?? 0) - (editingItem.quantity ?? 0) > 0;
     try {
       await (api as any).updateReventaItem(editingItem._id, {
-        name: editForm.name.trim() || editingItem.name,
-        salePrice: parseInt(editForm.salePrice.replace(/\D/g, '')) || editingItem.salePrice,
+        // Si ya se vendió, nombre y precio de venta no se tocan
+        ...(wasSold ? {} : {
+          name: editForm.name.trim() || editingItem.name,
+          salePrice: parseInt(editForm.salePrice.replace(/\D/g, '')) || editingItem.salePrice,
+        }),
         costPrice: editForm.costPrice ? parseInt(editForm.costPrice.replace(/\D/g, '')) : null,
         supplierId: editForm.supplierId || null,
       });
@@ -480,59 +484,88 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Nombre</label>
-                  <input type="text" value={editForm.name}
-                    onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all" />
-                </div>
+              {(() => {
+                const wasSold = (editingItem.initialQuantity ?? 0) - (editingItem.quantity ?? 0) > 0;
+                const costVal  = parseInt(editForm.costPrice.replace(/\D/g, '') || '0');
+                const saleVal  = editingItem.salePrice;
+                return (
+                  <div className="space-y-4">
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Precio de Venta</label>
-                    <NumericInput value={editForm.salePrice}
-                      onChange={raw => setEditForm(f => ({ ...f, salePrice: raw }))}
-                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm text-center transition-all" />
+                    {/* Nombre — solo lectura si ya se vendió */}
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Nombre</label>
+                      {wasSold ? (
+                        <div className="w-full p-3 bg-gray-50 rounded-2xl font-bold text-sm text-gray-500 select-none">
+                          {editingItem.name}
+                        </div>
+                      ) : (
+                        <input type="text" value={editForm.name}
+                          onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                          className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all" />
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Precio de Venta — solo lectura si ya se vendió */}
+                      <div>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">
+                          Precio de Venta
+                          {wasSold && <span className="ml-1 text-gray-300 normal-case font-bold tracking-normal">(fijo)</span>}
+                        </label>
+                        {wasSold ? (
+                          <div className="w-full p-3 bg-gray-50 rounded-2xl font-black text-sm text-center text-gray-500 select-none">
+                            Gs. {editingItem.salePrice.toLocaleString()}
+                          </div>
+                        ) : (
+                          <NumericInput value={editForm.salePrice}
+                            onChange={raw => setEditForm(f => ({ ...f, salePrice: raw }))}
+                            className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm text-center transition-all" />
+                        )}
+                      </div>
+
+                      {/* Precio de Costo — siempre editable */}
+                      <div>
+                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Precio de Costo</label>
+                        <NumericInput value={editForm.costPrice} placeholder="Opcional"
+                          onChange={raw => setEditForm(f => ({ ...f, costPrice: raw }))}
+                          className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm text-center transition-all" />
+                      </div>
+                    </div>
+
+                    {/* Proveedor — siempre editable */}
+                    <div>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Proveedor</label>
+                      <select value={editForm.supplierId}
+                        onChange={e => setEditForm(f => ({ ...f, supplierId: e.target.value }))}
+                        className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm cursor-pointer transition-all">
+                        <option value="">Sin proveedor</option>
+                        {reventaSuppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Ganancia estimada — usa precio de costo nuevo vs precio de venta real */}
+                    {editForm.costPrice && (
+                      <div className="bg-orange-50 rounded-2xl p-4 flex items-center justify-between">
+                        <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Ganancia estimada</span>
+                        <span className={cn('font-black text-lg', (saleVal - costVal) >= 0 ? 'text-emerald-600' : 'text-red-500')}>
+                          Gs. {(saleVal - costVal).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={() => setEditingItem(null)}
+                        className="flex-1 py-3.5 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">
+                        Cancelar
+                      </button>
+                      <button onClick={handleSaveEdit} disabled={saving || (!wasSold && !editForm.name.trim())}
+                        className="flex-1 py-3.5 rounded-2xl bg-orange-500 text-white font-black shadow-xl shadow-orange-200 hover:bg-orange-600 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2">
+                        {saving ? 'Guardando...' : <><Check size={16} /> Guardar</>}
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Precio de Costo</label>
-                    <NumericInput value={editForm.costPrice} placeholder="Opcional"
-                      onChange={raw => setEditForm(f => ({ ...f, costPrice: raw }))}
-                      className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm text-center transition-all" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 ml-1">Proveedor</label>
-                  <select value={editForm.supplierId}
-                    onChange={e => setEditForm(f => ({ ...f, supplierId: e.target.value }))}
-                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-bold text-sm cursor-pointer transition-all">
-                    <option value="">Sin proveedor</option>
-                    {reventaSuppliers.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-                  </select>
-                </div>
-
-                {editForm.costPrice && editForm.salePrice && (
-                  <div className="bg-orange-50 rounded-2xl p-4 flex items-center justify-between">
-                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Ganancia estimada</span>
-                    <span className={cn('font-black text-lg', (parseInt(editForm.salePrice) - parseInt(editForm.costPrice)) >= 0 ? 'text-emerald-600' : 'text-red-500')}>
-                      Gs. {(parseInt(editForm.salePrice.replace(/\D/g, '') || '0') - parseInt(editForm.costPrice.replace(/\D/g, '') || '0')).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <button onClick={() => setEditingItem(null)}
-                    className="flex-1 py-3.5 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">
-                    Cancelar
-                  </button>
-                  <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim()}
-                    className="flex-1 py-3.5 rounded-2xl bg-orange-500 text-white font-black shadow-xl shadow-orange-200 hover:bg-orange-600 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2">
-                    {saving ? 'Guardando...' : <><Check size={16} /> Guardar</>}
-                  </button>
-                </div>
-              </div>
+                );
+              })()}
             </motion.div>
           </motion.div>
         )}
