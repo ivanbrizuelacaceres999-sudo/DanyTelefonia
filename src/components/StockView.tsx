@@ -171,7 +171,10 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
   );
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.model.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = !q
+      || p.model.toLowerCase().includes(q)
+      || (manufacturers.find(m => m._id === p.manufacturerId)?.name ?? '').toLowerCase().includes(q);
     const matchesCategory = selectedCategoryId ? p.categoryId === selectedCategoryId : true;
     return matchesSearch && matchesCategory;
   });
