@@ -271,10 +271,14 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], users = [
 
   const handleAddCost = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createFixedCost({ description: newCost.description, amount: parseInt(newCost.amount) || 0, date: new Date().toISOString() });
-    setIsAddingCost(false);
-    setNewCost({ description: '', amount: '' });
-    onRefresh();
+    try {
+      await api.createFixedCost({ description: newCost.description, amount: parseInt(newCost.amount) || 0, date: new Date().toISOString() });
+      setIsAddingCost(false);
+      setNewCost({ description: '', amount: '' });
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al registrar el gasto: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const handleAddWithdrawal = async (e: React.FormEvent) => {
@@ -296,8 +300,12 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], users = [
   };
 
   const handleDeleteWithdrawal = async (id: string) => {
-    await (api as any).deleteCashWithdrawal(id);
-    loadWithdrawals();
+    try {
+      await (api as any).deleteCashWithdrawal(id);
+      loadWithdrawals();
+    } catch (err: any) {
+      alert('Error al eliminar el retiro: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   // ── Calcular rango de exportación ─────────────────────────────

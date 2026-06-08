@@ -501,20 +501,27 @@ export const UsersView = ({ users, onRefresh }: UsersViewProps) => {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: any = { name: newUser.name, password: newUser.password, role: newUser.role };
-    if (newUser.role !== 'admin' && newUser.weeklyWage) payload.weeklyWage = parseFloat(newUser.weeklyWage);
-    await api.createUser(payload);
-    setIsAdding(false);
-    setNewUser({ name: '', password: '', role: 'cashier', weeklyWage: '' });
-    onRefresh();
+    try {
+      const payload: any = { name: newUser.name, password: newUser.password, role: newUser.role };
+      if (newUser.role !== 'admin' && newUser.weeklyWage) payload.weeklyWage = parseFloat(newUser.weeklyWage);
+      await api.createUser(payload);
+      setIsAdding(false);
+      setNewUser({ name: '', password: '', role: 'cashier', weeklyWage: '' });
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al guardar el usuario: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingUser) {
+    if (!editingUser) return;
+    try {
       await api.updateUser((editingUser as any)._id, editingUser);
       setEditingUser(null);
       onRefresh();
+    } catch (err: any) {
+      alert('Error al actualizar el usuario: ' + (err?.message ?? 'Error desconocido'));
     }
   };
 

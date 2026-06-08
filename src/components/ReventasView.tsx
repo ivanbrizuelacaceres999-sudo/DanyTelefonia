@@ -75,13 +75,21 @@ export const ReventasView = ({ reventaItems, reventaSuppliers, onRefresh }: Reve
   };
 
   const handleDelete = async (id: string) => {
-    await (api as any).deleteReventaItem(id);
-    onRefresh();
+    try {
+      await (api as any).deleteReventaItem(id);
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al eliminar el artículo: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const handleDeleteSupplier = async (id: string) => {
-    await (api as any).deleteReventaSupplier(id);
-    onRefresh();
+    try {
+      await (api as any).deleteReventaSupplier(id);
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al eliminar el proveedor: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const openEdit = (item: ReventaItem) => {

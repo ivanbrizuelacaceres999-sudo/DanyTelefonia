@@ -426,8 +426,12 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   };
 
   const handleDeleteWithdrawal = async (id: string) => {
-    await (api as any).deleteCashWithdrawal(id);
-    if (session?._id) loadWithdrawals(String(session._id));
+    try {
+      await (api as any).deleteCashWithdrawal(id);
+      if (session?._id) loadWithdrawals(String(session._id));
+    } catch (err: any) {
+      alert('Error al eliminar el retiro: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const handleAddMotive = async (e: React.FormEvent) => {
@@ -444,8 +448,12 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   };
 
   const handleDeleteMotive = async (id: string) => {
-    await (api as any).deleteWithdrawalMotive(id);
-    loadMotives();
+    try {
+      await (api as any).deleteWithdrawalMotive(id);
+      loadMotives();
+    } catch (err: any) {
+      alert('Error al eliminar el motivo: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const allMotives = customMotives.map(m => ({ id: m._id, name: m.name }));

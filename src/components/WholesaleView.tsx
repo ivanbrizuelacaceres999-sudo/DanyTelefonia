@@ -122,18 +122,26 @@ export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewPro
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createWholesaler({ ...newWholesaler, code: newWholesaler.code.trim().toUpperCase() || null, debt: parseInt(newWholesaler.debt) || 0 });
-    setIsAdding(false);
-    setNewWholesaler({ code: '', name: '', businessName: '', contact: '', debt: '' });
-    onRefresh();
+    try {
+      await api.createWholesaler({ ...newWholesaler, code: newWholesaler.code.trim().toUpperCase() || null, debt: parseInt(newWholesaler.debt) || 0 });
+      setIsAdding(false);
+      setNewWholesaler({ code: '', name: '', businessName: '', contact: '', debt: '' });
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al guardar el mayorista: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingWholesaler) return;
-    await api.updateWholesaler(editingWholesaler._id, editingWholesaler);
-    setEditingWholesaler(null);
-    onRefresh();
+    try {
+      await api.updateWholesaler(editingWholesaler._id, editingWholesaler);
+      setEditingWholesaler(null);
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al actualizar el mayorista: ' + (err?.message ?? 'Error desconocido'));
+    }
   };
 
   const handleDelete = (id: string) => {
