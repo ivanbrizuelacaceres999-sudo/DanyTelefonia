@@ -19,6 +19,7 @@ interface HistoryViewProps {
   fixedCosts: FixedCost[];
   repairs?:   any[];
   products?:  Product[];
+  users?:     UserProfile[];
   user?:      UserProfile;
   onRefresh:  () => void;
 }
@@ -32,7 +33,7 @@ const METHOD_LABELS: Record<string, string> = {
 const fmt = (date: string) => { try { return format(parseISO(date), 'dd/MM/yyyy HH:mm'); } catch { return '—'; } };
 const fmtDate = (date: string) => { try { return format(parseISO(date), 'dd/MM/yyyy'); } catch { return '—'; } };
 
-export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onRefresh }: HistoryViewProps) => {
+export const HistoryView = ({ fixedCosts, repairs = [], products = [], users = [], user, onRefresh }: HistoryViewProps) => {
   const isAdmin = user?.role === 'admin';
 
   // ── Sub-pestañas ──────────────────────────────────────────
@@ -854,6 +855,13 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onR
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex flex-wrap items-center gap-1">
                           {(() => { try { return format(parseISO(s.date), 'HH:mm · dd/MM/yy'); } catch { return '—'; } })()}
                           {' · '}{s.items?.length ?? 0} art.
+                          {(() => {
+                            const sess = sessions.find(ss => String(ss._id) === String(s.sessionId));
+                            const cashier = (sess?.openedBy as any)?.name;
+                            return cashier ? (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 bg-indigo-50 text-indigo-500 rounded-full">👤 {cashier}</span>
+                            ) : null;
+                          })()}
                           {s.items?.some((i: any) => i.type === 'repair') && (
                             <span className="text-[9px] font-black px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full">🔧 Rep.</span>
                           )}
@@ -917,6 +925,17 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onR
               </span>
             </div>
 
+            {(() => {
+              const sess = sessions.find(ss => String(ss._id) === String(selectedSale.sessionId));
+              const cashier = (sess?.openedBy as any)?.name;
+              return cashier ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-2xl">
+                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Cobrado por</span>
+                  <span className="font-black text-indigo-700 text-sm">👤 {cashier}</span>
+                </div>
+              ) : null;
+            })()}
+
             {selectedSale.customerName && selectedSale.customerName !== 'Consumidor Final' && (
               <p className="font-bold text-gray-700 text-sm">
                 Cliente: <span className="font-black text-gray-900">{selectedSale.customerName}</span>
@@ -943,18 +962,23 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], user, onR
                 const repairData = isRepair ? (repairs || []).find((r: any) => r._id === item.id) : null;
                 return (
                   <div key={idx} className={cn("p-4 rounded-2xl border",
-                    isRepair ? "bg-amber-50 border-amber-100" : "bg-gray-50 border-transparent")}>
+                    isRepair ? "bg-amber-50 border-amber-100" : item.type === 'reventa' ? "bg-orange-50 border-orange-100" : "bg-gray-50 border-transparent")}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center text-white flex-shrink-0',
-                          isRepair ? 'bg-amber-500' : 'bg-indigo-500')}>
-                          {isRepair ? <Wrench size={16} /> : <Smartphone size={16} />}
+                          isRepair ? 'bg-amber-500' : item.type === 'reventa' ? 'bg-orange-500' : 'bg-indigo-500')}>
+                          {isRepair ? <Wrench size={16} /> : item.type === 'reventa' ? <ShoppingBag size={16} /> : <Smartphone size={16} />}
                         </div>
                         <div>
                           <p className="font-bold text-gray-800 text-sm">{item.name}</p>
                           <p className="text-[10px] font-bold text-gray-400 uppercase">
-                            {isRepair ? 'Servicio de reparación' : `×${item.quantity} · Gs. ${toNum(item.price).toLocaleString()} c/u`}
+                            {isRepair ? 'Servicio de reparación' : item.type === 'reventa' ? `×${item.quantity} · Gs. ${toNum(item.price).toLocaleString()} c/u · Reventa` : `×${item.quantity} · Gs. ${toNum(item.price).toLocaleString()} c/u`}
                           </p>
+                          {isRepair && repairData?.technicianId && (
+                            <p className="text-[10px] font-black text-amber-600 mt-0.5">
+                              🔧 Técnico: {users.find(u => u._id === repairData.technicianId)?.name ?? 'Sin asignar'}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <p className="font-black text-gray-800">Gs. {(toNum(item.price) * item.quantity).toLocaleString()}</p>

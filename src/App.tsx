@@ -275,7 +275,7 @@ function App() {
       case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
       case 'reventas':      return <ReventasView reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} />;
       case 'wholesale':     return <WholesaleView wholesalers={wholesalers} onRefresh={fetchData} />;
-      case 'history':       return <HistoryView sales={sales} fixedCosts={fixedCosts} repairs={repairs} products={products} user={user} onRefresh={fetchData} />;
+      case 'history':       return <HistoryView sales={sales} fixedCosts={fixedCosts} repairs={repairs} products={products} users={users} user={user} onRefresh={fetchData} />;
       case 'stats':         return <StatisticsView />;
       case 'gastos':        return <GastosView fixedCosts={fixedCosts} users={users} onRefresh={fetchData} />;
       case 'warranty':      return <WarrantyView sales={sales} products={products} onRefresh={fetchData} />;
