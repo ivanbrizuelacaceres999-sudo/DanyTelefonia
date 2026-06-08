@@ -923,7 +923,9 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         {/* Fila 3: Total + Finalizar */}
         <div className="flex items-center gap-3">
           <div>
-            {discountN > 0 && <p className="text-[10px] text-gray-400 font-bold line-through leading-none">Gs. {subtotal.toLocaleString()}</p>}
+            <p className={cn("text-[10px] text-gray-400 font-bold line-through leading-none", discountN === 0 && "invisible")}>
+              Gs. {subtotal.toLocaleString()}
+            </p>
             <p className="text-2xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
           </div>
           <button onClick={checkout}
@@ -996,8 +998,8 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         </div>
 
         {/* Descuento */}
-        <div className="space-y-1.5 shrink-0">
-          <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Descuento</label>
+        <div className="shrink-0">
+          <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Descuento</label>
           <div className="flex items-center gap-1.5">
             <NumericInput value={discount} onChange={raw => setDiscount(raw)}
               className="w-16 bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-center text-gray-700 outline-none focus:border-indigo-400" />
@@ -1014,13 +1016,19 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
               </button>
             </div>
           </div>
-          {discountN > 0 && <p className="text-[9px] font-bold text-red-500 text-center">-Gs. {discountN.toLocaleString()}</p>}
+          {/* Espacio fijo para evitar layout shift — siempre ocupa altura */}
+          <p className={cn("text-[9px] font-bold text-red-500 text-center mt-1.5 h-3 leading-3", discountN === 0 && "invisible")}>
+            -{discountN > 0 ? `Gs. ${discountN.toLocaleString()}` : '—'}
+          </p>
         </div>
 
         {/* Total + Finalizar */}
         <div className="ml-auto flex items-center gap-5 shrink-0">
           <div className="text-right">
-            {discountN > 0 && <p className="text-xs text-gray-400 font-bold line-through">Gs. {subtotal.toLocaleString()}</p>}
+            {/* Espacio fijo para evitar layout shift en el total */}
+            <p className={cn("text-xs text-gray-400 font-bold line-through h-4 leading-4", discountN === 0 && "invisible")}>
+              Gs. {subtotal.toLocaleString()}
+            </p>
             <p className="text-3xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
           </div>
           <button onClick={checkout}

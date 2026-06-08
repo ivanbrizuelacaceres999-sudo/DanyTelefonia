@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Plus, Search, Edit2, Trash2, Phone, Building2, Wallet, DollarSign, CheckCircle, Printer, History, X } from 'lucide-react';
 import { api } from '../api';
-import { Wholesaler } from '../types';
+import { Wholesaler, UserProfile } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput as NumInput } from './ui/NumericInput';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 interface WholesaleViewProps {
   wholesalers: Wholesaler[];
   onRefresh: () => void;
+  user?: UserProfile;
 }
 
 
@@ -19,7 +20,8 @@ interface WholesaleViewProps {
 const printPaymentTicket = (
   wholesaler: { name: string; businessName?: string; contact?: string; debt: number },
   amountPaid: number,
-  previousDebt: number
+  previousDebt: number,
+  collectedBy?: string
 ) => {
   const newDebt     = Math.max(0, previousDebt - amountPaid);
   const isPaidOff   = newDebt === 0;
@@ -73,6 +75,11 @@ const printPaymentTicket = (
     <div style="margin-top:12px;padding:10px;background:#f0fdf4;border-radius:10px;text-align:center">
       <p style="font-size:12px;font-weight:900;color:#16a34a">✓ DEUDA SALDADA COMPLETAMENTE</p>
     </div>` : ''}
+    ${collectedBy ? `
+    <div style="margin-top:12px;padding:10px;background:#eff6ff;border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+      <p style="font-size:10px;font-weight:900;color:#93c5fd;text-transform:uppercase;letter-spacing:1px">Cobrado por</p>
+      <p style="font-size:12px;font-weight:900;color:#1d4ed8">👤 ${collectedBy}</p>
+    </div>` : ''}
   </div>
 
   <div style="margin-top:20px;padding-top:16px;border-top:2px dashed #e5e7eb;text-align:center">
@@ -93,7 +100,7 @@ const printPaymentTicket = (
 
 
 
-export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) => {
+export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingWholesaler, setEditingWholesaler] = useState<Wholesaler | null>(null);
   const [payingWholesaler, setPayingWholesaler] = useState<Wholesaler | null>(null);
@@ -141,9 +148,9 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
     if (!payingWholesaler) return;
     const amount       = parseInt(paymentAmount) || 0;
     const previousDebt = payingWholesaler.debt;
-    // Usar el nuevo endpoint que guarda el historial
-    await (api as any).payWholesaler(payingWholesaler._id, amount, paymentNote);
-    printPaymentTicket(payingWholesaler, amount, previousDebt);
+    const collectedBy  = user?.name;
+    await (api as any).payWholesaler(payingWholesaler._id, amount, paymentNote, collectedBy);
+    printPaymentTicket(payingWholesaler, amount, previousDebt, collectedBy);
     setPayingWholesaler(null);
     setPaymentAmount('');
     setPaymentNote('');
@@ -466,6 +473,12 @@ export const WholesaleView = ({ wholesalers, onRefresh }: WholesaleViewProps) =>
                           Gs. {p.remainingDebt.toLocaleString()}{p.remainingDebt === 0 && ' ✓'}
                         </span>
                       </div>
+                      {p.collectedBy && (
+                        <div className="flex items-center justify-between bg-indigo-50 border-t border-indigo-100 px-4 py-2">
+                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Cobrado por</span>
+                          <span className="text-[11px] font-black text-indigo-600">👤 {p.collectedBy}</span>
+                        </div>
+                      )}
                       {p.note && (
                         <div className="px-4 pb-3 pt-2 border-t border-gray-50">
                           <p className="text-[10px] font-bold text-gray-400 italic">"{p.note}"</p>

@@ -121,13 +121,13 @@ export const api = {
     await broadcast('wholesalers');
     return { ok: true };
   },
-  payWholesaler: async (id: string, amount: number, note?: string) => {
+  payWholesaler: async (id: string, amount: number, note?: string, collectedBy?: string) => {
     const { data: w } = await supabase.from('wholesalers').select('*').eq('id', id).single();
     if (!w) throw new Error('Mayorista no encontrado');
     const previousDebt = w.debt;
     const remainingDebt = Math.max(0, previousDebt - amount);
     const history = [...(w.payment_history ?? []), {
-      date: new Date().toISOString(), amount, remainingDebt, note: note ?? '',
+      date: new Date().toISOString(), amount, remainingDebt, note: note ?? '', collectedBy: collectedBy ?? '',
     }];
     const { data } = await supabase.from('wholesalers')
       .update({ debt: remainingDebt, payment_history: history })
