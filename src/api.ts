@@ -80,6 +80,29 @@ export const api = {
     return { ok: true };
   },
 
+  // ─── Fabricantes ─────────────────────────────────────────────
+  getManufacturers: async () => {
+    const { data } = await supabase.from('manufacturers').select('*').order('name');
+    return toClient(data ?? []);
+  },
+  createManufacturer: async (name: string) => {
+    const { data, error } = await supabase.from('manufacturers').insert({ name }).select().single();
+    if (error) throw new Error(error.message);
+    await broadcast('manufacturers');
+    return toClient(data);
+  },
+  updateManufacturer: async (id: string, name: string) => {
+    const { data, error } = await supabase.from('manufacturers').update({ name }).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
+    await broadcast('manufacturers');
+    return toClient(data);
+  },
+  deleteManufacturer: async (id: string) => {
+    await supabase.from('manufacturers').delete().eq('id', id);
+    await broadcast('manufacturers');
+    return { ok: true };
+  },
+
   // ─── Categorías ─────────────────────────────────────────────
   getCategories: async () => {
     const { data } = await supabase.from('categories').select('*').order('name');

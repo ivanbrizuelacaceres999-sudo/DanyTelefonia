@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Minus, Search, Edit2, Trash2, Package, MapPin, Tag, ArrowLeft, AlertTriangle, RefreshCw, ShieldCheck, Scan, Printer, BarChart2, TrendingUp, TrendingDown, Clock, DollarSign, ShoppingCart } from 'lucide-react';
 import { api } from '../api';
-import { Product, Category } from '../types';
+import { Product, Category, Manufacturer } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 interface StockViewProps {
   products: Product[];
   categories: Category[];
+  manufacturers: Manufacturer[];
   onRefresh: () => void;
 }
 
@@ -93,7 +94,7 @@ const displayLocation = (loc: string) => {
   return parts.join(' · ');
 };
 
-export const StockView = ({ products, categories, onRefresh }: StockViewProps) => {
+export const StockView = ({ products, categories, manufacturers, onRefresh }: StockViewProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -107,6 +108,9 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
   });
   const [newCategory, setNewCategory] = useState({ name: '', warrantyDays: '2', isLocal: false });
   const [editingCategory, setEditingCategory] = useState<{ _id: string; name: string; warrantyDays: string; isLocal: boolean } | null>(null);
+  const [isManagingManufacturers, setIsManagingManufacturers] = useState(false);
+  const [newManufacturerName, setNewManufacturerName] = useState('');
+  const [editingManufacturer, setEditingManufacturer] = useState<{ _id: string; name: string } | null>(null);
   // ── Modal de categoría para productos nuevos escaneados ───
   const [scanCategoryModal, setScanCategoryModal] = useState<{ barcode: string } | null>(null);
   const [generatingBarcode, setGeneratingBarcode] = useState<string | null>(null);
@@ -228,6 +232,39 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
     onRefresh();
   };
 
+  const handleAddManufacturer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newManufacturerName.trim()) return;
+    try {
+      await (api as any).createManufacturer(newManufacturerName.trim());
+      setNewManufacturerName('');
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al crear fabricante: ' + (err?.message ?? 'Error desconocido'));
+    }
+  };
+
+  const handleUpdateManufacturer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingManufacturer) return;
+    try {
+      await (api as any).updateManufacturer(editingManufacturer._id, editingManufacturer.name);
+      setEditingManufacturer(null);
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al actualizar fabricante: ' + (err?.message ?? 'Error desconocido'));
+    }
+  };
+
+  const handleDeleteManufacturer = async (id: string) => {
+    try {
+      await (api as any).deleteManufacturer(id);
+      onRefresh();
+    } catch (err: any) {
+      alert('Error al eliminar fabricante: ' + (err?.message ?? 'Error desconocido'));
+    }
+  };
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingProduct) {
@@ -312,6 +349,13 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
         <div className="flex items-center gap-2 md:gap-3">
           {mainTab === 'stock' && (
             <>
+              <button
+                onClick={() => setIsManagingManufacturers(true)}
+                className="bg-white border border-gray-200 text-gray-600 font-black px-3 md:px-6 py-3 rounded-2xl hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2 group text-sm"
+              >
+                <Package size={16} className="group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Fabricantes</span>
+              </button>
               <button
                 onClick={() => setIsAddingCategory(true)}
                 className="bg-white border border-gray-200 text-gray-600 font-black px-3 md:px-6 py-3 rounded-2xl hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2 group text-sm"
@@ -779,6 +823,13 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
                 </select>
               </div>
               <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Fabricante</label>
+                <select value={newProduct.manufacturerId ?? ''} onChange={e => setNewProduct({...newProduct, manufacturerId: e.target.value || undefined})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                  <option value="">Sin fabricante</option>
+                  {manufacturers.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Inicial</label>
                 <NumericInput value={String(newProduct.purchasedQuantity ?? '')} onChange={raw => setNewProduct({...newProduct, purchasedQuantity: Number(raw) || 0, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
@@ -1026,8 +1077,16 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Categoría</label>
-                <select required value={editingProduct.categoryId} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                <select value={editingProduct.categoryId ?? ''} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                  <option value="">Sin categoría</option>
                   {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Fabricante</label>
+                <select value={editingProduct.manufacturerId ?? ''} onChange={e => setEditingProduct({...editingProduct, manufacturerId: e.target.value || undefined})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                  <option value="">Sin fabricante</option>
+                  {manufacturers.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
@@ -1355,6 +1414,66 @@ export const StockView = ({ products, categories, onRefresh }: StockViewProps) =
           onConfirm={() => { pendingConfirm.onConfirm(); setPendingConfirm(null); }}
           onCancel={() => setPendingConfirm(null)}
         />
+      )}
+
+      {isManagingManufacturers && (
+        <Modal title="Gestionar Fabricantes" onClose={() => { setIsManagingManufacturers(false); setEditingManufacturer(null); setNewManufacturerName(''); }}>
+          <div className="space-y-6">
+            <form onSubmit={handleAddManufacturer} className="space-y-3 p-5 bg-indigo-50 rounded-3xl border border-indigo-100">
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Nuevo Fabricante</p>
+              <div className="flex gap-3">
+                <input
+                  required
+                  placeholder="Ej: Samsung, Xiaomi, Motorola..."
+                  value={newManufacturerName}
+                  onChange={e => setNewManufacturerName(e.target.value)}
+                  className="flex-1 p-4 bg-white border-2 border-transparent focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold"
+                />
+                <button type="submit" className="px-6 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm">
+                  Agregar
+                </button>
+              </div>
+            </form>
+
+            <div className="space-y-3">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fabricantes Existentes</p>
+              {manufacturers.length === 0 ? (
+                <p className="text-center py-8 text-gray-300 font-bold text-sm">Sin fabricantes aún</p>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto">
+                  {manufacturers.map(m => (
+                    editingManufacturer?._id === m._id ? (
+                      <form key={m._id} onSubmit={handleUpdateManufacturer} className="flex gap-2">
+                        <input
+                          required
+                          value={editingManufacturer.name}
+                          onChange={e => setEditingManufacturer({ ...editingManufacturer, name: e.target.value })}
+                          className="flex-1 p-3 bg-gray-50 border-2 border-indigo-400 rounded-2xl outline-none font-bold text-sm"
+                        />
+                        <button type="submit" className="px-4 bg-indigo-600 text-white font-black rounded-2xl text-sm hover:bg-indigo-700">Guardar</button>
+                        <button type="button" onClick={() => setEditingManufacturer(null)} className="px-4 bg-gray-100 text-gray-600 font-black rounded-2xl text-sm hover:bg-gray-200">✕</button>
+                      </form>
+                    ) : (
+                      <div key={m._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
+                        <span className="font-black text-gray-800">{m.name}</span>
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setEditingManufacturer({ _id: m._id, name: m.name })}
+                            className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-colors">
+                            <Edit2 size={15} />
+                          </button>
+                          <button onClick={() => handleDeleteManufacturer(m._id)}
+                            className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

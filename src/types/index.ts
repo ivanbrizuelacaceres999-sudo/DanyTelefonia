@@ -1,3 +1,8 @@
+export interface Manufacturer {
+  _id: string;
+  name: string;
+}
+
 export interface UserProfile {
   _id: string;
   name: string;
@@ -61,6 +66,7 @@ export interface Product {
   isWholesale?: boolean;
   barcode?: string;
   batches?: { quantity: number; costPrice: number; date: string; }[];
+  manufacturerId?: string;
 }
 
 export interface RepairType {

@@ -4,7 +4,7 @@ import {
   requestPermission, initKnownIds, getSettings,
   checkWarranty, checkSales10, checkOldRepairs, checkWithdrawal,
 } from './utils/notifications';
-import { UserProfile, Category, Wholesaler, FixedCost, Product, Repair, Sale, ReventaItem, ReventaSupplier } from './types';
+import { UserProfile, Category, Manufacturer, Wholesaler, FixedCost, Product, Repair, Sale, ReventaItem, ReventaSupplier } from './types';
 import { Sidebar } from './components/Sidebar';
 import { LoginScreen } from './components/LoginScreen';
 import { DashboardView } from './components/DashboardView';
@@ -55,6 +55,7 @@ function App() {
   const [repairs,          setRepairs]          = useState<Repair[]>([]);
   const [sales,            setSales]            = useState<Sale[]>([]);
   const [categories,       setCategories]       = useState<Category[]>([]);
+  const [manufacturers,    setManufacturers]    = useState<Manufacturer[]>([]);
   const [wholesalers,      setWholesalers]      = useState<Wholesaler[]>([]);
   const [fixedCosts,       setFixedCosts]       = useState<FixedCost[]>([]);
   const [users,            setUsers]            = useState<UserProfile[]>([]);
@@ -87,11 +88,12 @@ function App() {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [p, r, s, c, w, fc, u, ri, rs] = await Promise.all([
+      const [p, r, s, c, w, fc, u, ri, rs, mfr] = await Promise.all([
         api.getProducts(), api.getRepairs(), api.getSales(),
         api.getCategories(), api.getWholesalers(),
         api.getFixedCosts(), api.getUsers(),
         (api as any).getReventaItems(), (api as any).getReventaSuppliers(),
+        (api as any).getManufacturers(),
       ]);
       const repairs_     = Array.isArray(r)  ? r  : [];
       const sales_       = Array.isArray(s)  ? s  : [];
@@ -106,6 +108,7 @@ function App() {
       setUsers(Array.isArray(u)      ? u   : []);
       setReventaItems(Array.isArray(ri)  ? ri  : []);
       setReventaSuppliers(Array.isArray(rs) ? rs : []);
+      setManufacturers(Array.isArray(mfr) ? mfr : []);
 
       // ── Notificaciones ─────────────────────────────────────────
       const settings = getSettings();
@@ -151,6 +154,7 @@ function App() {
           case 'users':             api.getUsers().then(u => setUsers(Array.isArray(u) ? u : [])); break;
           case 'reventa-items':     (api as any).getReventaItems().then((ri: any) => setReventaItems(Array.isArray(ri) ? ri : [])); break;
           case 'reventa-suppliers': (api as any).getReventaSuppliers().then((rs: any) => setReventaSuppliers(Array.isArray(rs) ? rs : [])); break;
+          case 'manufacturers':     (api as any).getManufacturers().then((m: any) => setManufacturers(Array.isArray(m) ? m : [])); break;
           default:            fetchData();
         }
       };
@@ -270,7 +274,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':     return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
-      case 'stock':         return <StockView products={products} categories={categories} onRefresh={fetchData} />;
+      case 'stock':         return <StockView products={products} categories={categories} manufacturers={manufacturers} onRefresh={fetchData} />;
       case 'repairs':       return <RepairsView repairs={repairs} products={products} onRefresh={fetchData} users={users} />;
       case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
       case 'reventas':      return <ReventasView reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} />;
