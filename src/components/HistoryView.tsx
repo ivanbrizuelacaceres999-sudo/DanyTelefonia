@@ -8,20 +8,21 @@ import {
 import { buildExcel } from '../utils/exportExcel';
 import { api } from '../api';
 import { socket } from '../socket';
-import { Sale, FixedCost, CashSession, UserProfile, ExpenseConfig, CashWithdrawal, WithdrawalMotive, Product } from '../types';
+import { Sale, FixedCost, CashSession, UserProfile, ExpenseConfig, CashWithdrawal, WithdrawalMotive, Product, Manufacturer } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { cn } from '../lib/utils';
 import { format, parseISO, isSameDay, isSameMonth, isSameYear } from 'date-fns';
 
 interface HistoryViewProps {
-  sales?:     Sale[];
-  fixedCosts: FixedCost[];
-  repairs?:   any[];
-  products?:  Product[];
-  users?:     UserProfile[];
-  user?:      UserProfile;
-  onRefresh:  () => void;
+  sales?:         Sale[];
+  fixedCosts:     FixedCost[];
+  repairs?:       any[];
+  products?:      Product[];
+  manufacturers?: Manufacturer[];
+  users?:         UserProfile[];
+  user?:          UserProfile;
+  onRefresh:      () => void;
 }
 
 const toNum = (v: any) => { const n = Number(v); return isNaN(n) ? 0 : n; };
@@ -33,7 +34,7 @@ const METHOD_LABELS: Record<string, string> = {
 const fmt = (date: string) => { try { return format(parseISO(date), 'dd/MM/yyyy HH:mm'); } catch { return '—'; } };
 const fmtDate = (date: string) => { try { return format(parseISO(date), 'dd/MM/yyyy'); } catch { return '—'; } };
 
-export const HistoryView = ({ fixedCosts, repairs = [], products = [], users = [], user, onRefresh }: HistoryViewProps) => {
+export const HistoryView = ({ fixedCosts, repairs = [], products = [], manufacturers = [], users = [], user, onRefresh }: HistoryViewProps) => {
   const isAdmin = user?.role === 'admin';
 
   // ── Sub-pestañas ──────────────────────────────────────────
@@ -968,6 +969,10 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], users = [
               {selectedSale.items?.map((item, idx) => {
                 const isRepair   = item.type === 'repair';
                 const repairData = isRepair ? (repairs || []).find((r: any) => r._id === item.id) : null;
+                const productData = item.type === 'product' ? products.find(p => p._id === item.id) : null;
+                const mfrName = productData?.manufacturerId
+                  ? manufacturers.find(m => m._id === productData.manufacturerId)?.name
+                  : null;
                 return (
                   <div key={idx} className={cn("p-4 rounded-2xl border",
                     isRepair ? "bg-amber-50 border-amber-100" : item.type === 'reventa' ? "bg-orange-50 border-orange-100" : "bg-gray-50 border-transparent")}>
@@ -982,6 +987,11 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], users = [
                           <p className="text-[10px] font-bold text-gray-400 uppercase">
                             {isRepair ? 'Servicio de reparación' : item.type === 'reventa' ? `×${item.quantity} · Gs. ${toNum(item.price).toLocaleString()} c/u · Reventa` : `×${item.quantity} · Gs. ${toNum(item.price).toLocaleString()} c/u`}
                           </p>
+                          {mfrName && (
+                            <span className="inline-block mt-0.5 text-[9px] font-black px-2 py-0.5 bg-sky-50 text-sky-600 rounded-full uppercase tracking-widest border border-sky-100">
+                              {mfrName}
+                            </span>
+                          )}
                           {isRepair && repairData?.technicianId && (
                             <p className="text-[10px] font-black text-amber-600 mt-0.5">
                               🔧 Técnico: {users.find(u => u._id === repairData.technicianId)?.name ?? 'Sin asignar'}

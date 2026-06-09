@@ -179,22 +179,22 @@ export const api = {
   getExpenseConfig: async () => {
     let { data } = await supabase.from('expense_config').select('*').maybeSingle();
     if (!data) {
-      const res = await supabase.from('expense_config').insert({ operative_percent: 0, fixed_percent: 0 }).select().single();
+      const res = await supabase.from('expense_config').insert({ operative_percent: 0, fixed_percent: 0, exchange_rate: 6300 }).select().single();
       data = res.data;
     }
     return toClient(data);
   },
-  updateExpenseConfig: async (body: { operativePercent: number; fixedPercent: number }) => {
+  updateExpenseConfig: async (body: { operativePercent: number; fixedPercent: number; exchangeRate: number }) => {
     let { data: existing } = await supabase.from('expense_config').select('id').maybeSingle();
     let data;
     if (existing) {
       const res = await supabase.from('expense_config')
-        .update({ operative_percent: body.operativePercent, fixed_percent: body.fixedPercent })
+        .update({ operative_percent: body.operativePercent, fixed_percent: body.fixedPercent, exchange_rate: body.exchangeRate })
         .eq('id', existing.id).select().single();
       data = res.data;
     } else {
       const res = await supabase.from('expense_config')
-        .insert({ operative_percent: body.operativePercent, fixed_percent: body.fixedPercent })
+        .insert({ operative_percent: body.operativePercent, fixed_percent: body.fixedPercent, exchange_rate: body.exchangeRate })
         .select().single();
       data = res.data;
     }

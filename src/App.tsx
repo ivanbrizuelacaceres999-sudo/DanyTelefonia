@@ -61,6 +61,7 @@ function App() {
   const [users,            setUsers]            = useState<UserProfile[]>([]);
   const [reventaItems,     setReventaItems]     = useState<ReventaItem[]>([]);
   const [reventaSuppliers, setReventaSuppliers] = useState<ReventaSupplier[]>([]);
+  const [exchangeRate,     setExchangeRate]     = useState<number>(6300);
 
   // ── Estados de los modales del escáner ───────────────────────
   const [restockModal,  setRestockModal]  = useState<RestockModal | null>(null);
@@ -88,12 +89,13 @@ function App() {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [p, r, s, c, w, fc, u, ri, rs, mfr] = await Promise.all([
+      const [p, r, s, c, w, fc, u, ri, rs, mfr, expCfg] = await Promise.all([
         api.getProducts(), api.getRepairs(), api.getSales(),
         api.getCategories(), api.getWholesalers(),
         api.getFixedCosts(), api.getUsers(),
         (api as any).getReventaItems(), (api as any).getReventaSuppliers(),
         (api as any).getManufacturers(),
+        (api as any).getExpenseConfig(),
       ]);
       const repairs_     = Array.isArray(r)  ? r  : [];
       const sales_       = Array.isArray(s)  ? s  : [];
@@ -109,6 +111,7 @@ function App() {
       setReventaItems(Array.isArray(ri)  ? ri  : []);
       setReventaSuppliers(Array.isArray(rs) ? rs : []);
       setManufacturers(Array.isArray(mfr) ? mfr : []);
+      if (expCfg?.exchangeRate) setExchangeRate(expCfg.exchangeRate);
 
       // ── Notificaciones ─────────────────────────────────────────
       const settings = getSettings();
@@ -274,12 +277,12 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':     return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
-      case 'stock':         return <StockView products={products} categories={categories} manufacturers={manufacturers} onRefresh={fetchData} />;
+      case 'stock':         return <StockView products={products} categories={categories} manufacturers={manufacturers} onRefresh={fetchData} exchangeRate={exchangeRate} />;
       case 'repairs':       return <RepairsView repairs={repairs} products={products} onRefresh={fetchData} users={users} />;
       case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
       case 'reventas':      return <ReventasView reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} onRefresh={fetchData} />;
       case 'wholesale':     return <WholesaleView wholesalers={wholesalers} onRefresh={fetchData} user={user ?? undefined} />;
-      case 'history':       return <HistoryView sales={sales} fixedCosts={fixedCosts} repairs={repairs} products={products} users={users} user={user} onRefresh={fetchData} />;
+      case 'history':       return <HistoryView sales={sales} fixedCosts={fixedCosts} repairs={repairs} products={products} manufacturers={manufacturers} users={users} user={user} onRefresh={fetchData} />;
       case 'stats':         return <StatisticsView />;
       case 'gastos':        return <GastosView fixedCosts={fixedCosts} users={users} onRefresh={fetchData} />;
       case 'warranty':      return <WarrantyView sales={sales} products={products} onRefresh={fetchData} />;

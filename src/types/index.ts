@@ -29,6 +29,7 @@ export interface ExpenseConfig {
   _id?: string;
   operativePercent: number;
   fixedPercent: number;
+  exchangeRate: number;
 }
 
 export interface Category {

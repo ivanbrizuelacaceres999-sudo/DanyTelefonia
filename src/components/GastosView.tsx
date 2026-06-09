@@ -27,7 +27,7 @@ type TabKey = 'gastos' | 'sueldos' | 'config' | 'destinos';
 
 export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) => {
   const [tab, setTab]                   = useState<TabKey>('gastos');
-  const [expenseConfig, setExpenseConfig] = useState<ExpenseConfig>({ operativePercent: 0, fixedPercent: 0 });
+  const [expenseConfig, setExpenseConfig] = useState<ExpenseConfig>({ operativePercent: 0, fixedPercent: 0, exchangeRate: 6300 });
   const [saving, setSaving]             = useState(false);
   const [savedOk, setSavedOk]           = useState(false);
   const [isAddingCost, setIsAddingCost] = useState(false);
@@ -55,7 +55,7 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
   useEffect(() => {
     (api as any).getExpenseConfig().then((c: any) => {
       if (c && !c.error) {
-        setExpenseConfig({ operativePercent: c.operativePercent ?? 0, fixedPercent: c.fixedPercent ?? 0 });
+        setExpenseConfig({ operativePercent: c.operativePercent ?? 0, fixedPercent: c.fixedPercent ?? 0, exchangeRate: c.exchangeRate ?? 6300 });
       }
     });
     loadMotives();
@@ -799,6 +799,29 @@ export const GastosView = ({ fixedCosts, users, onRefresh }: GastosViewProps) =>
               <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
                 <span className="font-black text-gray-700">Total asignado a costos</span>
                 <span className="font-black text-indigo-600">{fmtGs(100000 * (expenseConfig.operativePercent + expenseConfig.fixedPercent) / 100)} ({totalPercent}%)</span>
+              </div>
+            </div>
+
+            {/* ── Cotización dólar ── */}
+            <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-xs font-black">$</div>
+                <div>
+                  <p className="font-black text-gray-800 text-sm">Cotización del Dólar</p>
+                  <p className="text-[10px] font-bold text-gray-400">Se usa para mostrar precios de costo en USD en el stock</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">1 USD =</span>
+                <div className="flex items-center gap-1 bg-white border-2 border-emerald-200 focus-within:border-emerald-500 rounded-2xl px-4 py-2 flex-1">
+                  <input
+                    type="number" min={1} step={1}
+                    value={expenseConfig.exchangeRate}
+                    onChange={e => setExpenseConfig(c => ({ ...c, exchangeRate: parseInt(e.target.value) || 6300 }))}
+                    className="w-full text-center font-black text-emerald-700 bg-transparent outline-none text-xl"
+                  />
+                  <span className="font-black text-emerald-500 text-sm">Gs.</span>
+                </div>
               </div>
             </div>
 

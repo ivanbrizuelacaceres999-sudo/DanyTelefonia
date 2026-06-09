@@ -13,6 +13,7 @@ interface StockViewProps {
   categories: Category[];
   manufacturers: Manufacturer[];
   onRefresh: () => void;
+  exchangeRate?: number;
 }
 
 function printProductLabels(
@@ -94,7 +95,7 @@ const displayLocation = (loc: string) => {
   return parts.join(' · ');
 };
 
-export const StockView = ({ products, categories, manufacturers, onRefresh }: StockViewProps) => {
+export const StockView = ({ products, categories, manufacturers, onRefresh, exchangeRate = 6300 }: StockViewProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -104,7 +105,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   
   const [newProduct, setNewProduct] = useState({
-    model: '', categoryId: '', quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: ''
+    model: '', categoryId: '', manufacturerId: undefined as string | undefined, quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: ''
   });
   const [newCategory, setNewCategory] = useState({ name: '', warrantyDays: '2', isLocal: false });
   const [editingCategory, setEditingCategory] = useState<{ _id: string; name: string; warrantyDays: string; isLocal: boolean } | null>(null);
@@ -124,6 +125,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
   const [barcodeError, setBarcodeError] = useState(false);
   const [newLoc,  setNewLoc]  = useState({ estante: '', columna: '', fila: '' });
   const [editLoc, setEditLoc] = useState({ estante: '', columna: '', fila: '' });
+  const [newCostUsd,  setNewCostUsd]  = useState('');
+  const [editCostUsd, setEditCostUsd] = useState('');
 
   // ── Analítica de productos ───────────────────────────────────
   type StatsSort = 'units' | 'revenue' | 'margin' | 'idle';
@@ -188,8 +191,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
         location: formatLocation(newLoc.estante, newLoc.columna, newLoc.fila),
       });
       setIsAdding(false);
-      setNewProduct({ model: '', categoryId: selectedCategoryId || '', quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: '' });
+      setNewProduct({ model: '', categoryId: selectedCategoryId || '', manufacturerId: undefined, quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: '' });
       setNewLoc({ estante: '', columna: '', fila: '' });
+      setNewCostUsd('');
       onRefresh();
 
       // ── Si la categoría es "del local", generar código e imprimir etiqueta ──
@@ -744,7 +748,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
                           title="Imprimir etiquetas">
                           <Printer size={18} />
                         </button>
-                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); }} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); setEditCostUsd(p.costPrice > 0 ? (p.costPrice / (exchangeRate || 6300)).toFixed(2) : ''); }} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
                         <button onClick={() => handleDelete(p._id)} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                       </div>
                     </div>
@@ -796,9 +800,34 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Costo: Gs. {p.costPrice.toLocaleString()}</p>
-                      {p.isWholesale && <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest">Mayorista</span>}
+                    <div className="pt-3 border-t border-gray-50 space-y-2">
+                      {/* Fabricante */}
+                      {p.manufacturerId && manufacturers.find(m => m._id === p.manufacturerId) && (
+                        <div>
+                          <span className="text-[9px] font-black px-2.5 py-1 bg-sky-50 text-sky-600 rounded-full uppercase tracking-widest border border-sky-100">
+                            {manufacturers.find(m => m._id === p.manufacturerId)?.name}
+                          </span>
+                        </div>
+                      )}
+                      {/* Costo en verde con Gs + USD */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 flex-1">
+                          <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Costo</p>
+                          <p className="text-sm font-black text-emerald-700 tracking-tight mt-0.5 leading-none">
+                            Gs. {p.costPrice.toLocaleString()}
+                          </p>
+                          {p.costPrice > 0 && (
+                            <p className="text-[9px] font-bold text-emerald-400 mt-1 leading-none">
+                              USD {(p.costPrice / (exchangeRate || 6300)).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                        {p.isWholesale && (
+                          <span className="text-[9px] font-black text-purple-500 bg-purple-50 px-2.5 py-1.5 rounded-full uppercase tracking-widest border border-purple-100 flex-shrink-0">
+                            Mayorista
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -836,9 +865,39 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Inicial</label>
                 <NumericInput value={String(newProduct.purchasedQuantity ?? '')} onChange={raw => setNewProduct({...newProduct, purchasedQuantity: Number(raw) || 0, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Costo (Gs.)</label>
-                <NumericInput value={String(newProduct.costPrice ?? '')} onChange={raw => setNewProduct({...newProduct, costPrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+              <div className="col-span-full space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Costo</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-1">Guaraníes (Gs.)</p>
+                    <NumericInput
+                      value={String(newProduct.costPrice || '')}
+                      onChange={raw => {
+                        const gs = Number(raw) || 0;
+                        setNewProduct({ ...newProduct, costPrice: gs });
+                        setNewCostUsd(gs > 0 ? (gs / (exchangeRate || 6300)).toFixed(2) : '');
+                      }}
+                      className="w-full p-4 bg-emerald-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest ml-1">Dólares (USD)</p>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={newCostUsd}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setNewCostUsd(v);
+                        const usd = parseFloat(v.replace(',', '.'));
+                        if (!isNaN(usd)) setNewProduct(prev => ({ ...prev, costPrice: Math.round(usd * (exchangeRate || 6300)) }));
+                      }}
+                      className="w-full p-4 bg-blue-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Normal · Cliente (Gs.)</label>
@@ -1100,9 +1159,39 @@ export const StockView = ({ products, categories, manufacturers, onRefresh }: St
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Total Comprada</label>
                 <NumericInput required value={String(editingProduct.purchasedQuantity ?? '')} onChange={raw => setEditingProduct({...editingProduct, purchasedQuantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
-              <div className="space-y-2">
+              <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Costo</label>
-                <NumericInput required value={String(editingProduct.costPrice ?? '')} onChange={raw => setEditingProduct({...editingProduct, costPrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-1">Guaraníes (Gs.)</p>
+                    <NumericInput
+                      value={String(editingProduct.costPrice || '')}
+                      onChange={raw => {
+                        const gs = Number(raw) || 0;
+                        setEditingProduct({ ...editingProduct, costPrice: gs });
+                        setEditCostUsd(gs > 0 ? (gs / (exchangeRate || 6300)).toFixed(2) : '');
+                      }}
+                      className="w-full p-4 bg-emerald-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest ml-1">Dólares (USD)</p>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={editCostUsd}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setEditCostUsd(v);
+                        const usd = parseFloat(v.replace(',', '.'));
+                        if (!isNaN(usd)) setEditingProduct(prev => prev ? { ...prev, costPrice: Math.round(usd * (exchangeRate || 6300)) } : prev);
+                      }}
+                      className="w-full p-4 bg-blue-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Normal · Cliente (Gs.)</label>
