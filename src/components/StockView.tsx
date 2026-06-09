@@ -335,7 +335,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          {mainTab === 'stock' && selectedCategoryId && (
+          {mainTab === 'stock' && (selectedCategoryId || selectedManufacturerId) && (
             <button
               onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); }}
               className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
@@ -349,14 +349,18 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 ? 'Analítica'
                 : selectedCategoryId
                   ? categories.find(c => c._id === selectedCategoryId)?.name
-                  : 'Stock'}
+                  : selectedManufacturerId
+                    ? manufacturers.find(m => m._id === selectedManufacturerId)?.name ?? 'Proveedor'
+                    : 'Stock'}
             </h2>
             <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px] mt-1">
               {mainTab === 'analytics'
                 ? 'Rendimiento por Producto'
                 : selectedCategoryId
                   ? 'Productos en esta categoría'
-                  : 'Inventario por Categorías'}
+                  : selectedManufacturerId
+                    ? 'Productos de este proveedor'
+                    : 'Inventario por Categorías'}
             </p>
           </div>
         </div>
@@ -704,7 +708,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       )}
 
       <AnimatePresence mode="wait">
-        {!selectedCategoryId && !searchTerm ? (
+        {!selectedCategoryId && !searchTerm && !selectedManufacturerId ? (
           <motion.div
             key="categories"
             initial={{ opacity: 0, x: -20 }}
