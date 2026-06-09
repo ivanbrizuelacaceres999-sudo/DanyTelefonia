@@ -103,6 +103,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
   const [restockData, setRestockData] = useState({ quantity: '', costPrice: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedManufacturerId, setSelectedManufacturerId] = useState<string | null>(null);
   
   const [newProduct, setNewProduct] = useState({
     model: '', categoryId: '', manufacturerId: undefined as string | undefined, quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: ''
@@ -175,11 +176,17 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
 
   const filteredProducts = products.filter(p => {
     const q = searchTerm.toLowerCase();
+    const { estante, columna, fila } = parseLocation(p.location || '');
     const matchesSearch = !q
       || p.model.toLowerCase().includes(q)
-      || (manufacturers.find(m => m._id === p.manufacturerId)?.name ?? '').toLowerCase().includes(q);
+      || (manufacturers.find(m => m._id === p.manufacturerId)?.name ?? '').toLowerCase().includes(q)
+      || displayLocation(p.location || '').toLowerCase().includes(q)
+      || estante.toLowerCase().includes(q)
+      || columna.toLowerCase().includes(q)
+      || fila.toLowerCase().includes(q);
     const matchesCategory = selectedCategoryId ? p.categoryId === selectedCategoryId : true;
-    return matchesSearch && matchesCategory;
+    const matchesMfr = selectedManufacturerId ? p.manufacturerId === selectedManufacturerId : true;
+    return matchesSearch && matchesCategory && matchesMfr;
   });
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -330,7 +337,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
         <div className="flex items-center gap-4">
           {mainTab === 'stock' && selectedCategoryId && (
             <button
-              onClick={() => setSelectedCategoryId(null)}
+              onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); }}
               className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
             >
               <ArrowLeft size={24} />
@@ -625,12 +632,42 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
         <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
         <input
           type="text"
-          placeholder="Buscar productos en todo el inventario..."
+          placeholder="Buscar por modelo, fabricante o estante (ej: 'Samsung', 'Est. A1')..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="w-full bg-white border border-gray-100 rounded-[30px] py-4 sm:py-6 pl-12 sm:pl-16 pr-6 sm:pr-8 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700"
         />
       </div>
+
+      {/* ── Filtro por fabricante / proveedor ── */}
+      {manufacturers.length > 0 && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex-shrink-0">Proveedor:</span>
+          <button
+            onClick={() => setSelectedManufacturerId(null)}
+            className={cn(
+              "px-3 py-1.5 rounded-2xl font-black text-xs transition-all",
+              !selectedManufacturerId
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
+            )}>
+            Todos
+          </button>
+          {manufacturers.map(m => (
+            <button
+              key={m._id}
+              onClick={() => setSelectedManufacturerId(prev => prev === m._id ? null : m._id)}
+              className={cn(
+                "px-3 py-1.5 rounded-2xl font-black text-xs transition-all",
+                selectedManufacturerId === m._id
+                  ? "bg-sky-500 text-white shadow-md shadow-sky-200"
+                  : "bg-white text-gray-500 border border-gray-100 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-100"
+              )}>
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Warranties Section */}
       {warranties.length > 0 && (
