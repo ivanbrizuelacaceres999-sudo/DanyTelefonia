@@ -104,6 +104,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<string | null>(null);
+  const [selectedEstante, setSelectedEstante] = useState<string | null>(null);
   
   const [newProduct, setNewProduct] = useState({
     model: '', categoryId: '', manufacturerId: undefined as string | undefined, quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: ''
@@ -174,6 +175,10 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const uniqueEstantes = Array.from(
+    new Set(products.map(p => parseLocation(p.location || '').estante).filter(Boolean))
+  ).sort();
+
   const filteredProducts = products.filter(p => {
     const q = searchTerm.toLowerCase();
     const { estante, columna, fila } = parseLocation(p.location || '');
@@ -186,7 +191,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       || fila.toLowerCase().includes(q);
     const matchesCategory = selectedCategoryId ? p.categoryId === selectedCategoryId : true;
     const matchesMfr = selectedManufacturerId ? p.manufacturerId === selectedManufacturerId : true;
-    return matchesSearch && matchesCategory && matchesMfr;
+    const matchesEstante = selectedEstante ? estante === selectedEstante : true;
+    return matchesSearch && matchesCategory && matchesMfr && matchesEstante;
   });
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -335,9 +341,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          {mainTab === 'stock' && (selectedCategoryId || selectedManufacturerId) && (
+          {mainTab === 'stock' && (selectedCategoryId || selectedManufacturerId || selectedEstante) && (
             <button
-              onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); }}
+              onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); setSelectedEstante(null); }}
               className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
             >
               <ArrowLeft size={24} />
@@ -351,7 +357,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   ? categories.find(c => c._id === selectedCategoryId)?.name
                   : selectedManufacturerId
                     ? manufacturers.find(m => m._id === selectedManufacturerId)?.name ?? 'Proveedor'
-                    : 'Stock'}
+                    : selectedEstante
+                      ? `Estante ${selectedEstante}`
+                      : 'Stock'}
             </h2>
             <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px] mt-1">
               {mainTab === 'analytics'
@@ -360,7 +368,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   ? 'Productos en esta categoría'
                   : selectedManufacturerId
                     ? 'Productos de este proveedor'
-                    : 'Inventario por Categorías'}
+                    : selectedEstante
+                      ? 'Productos en este estante'
+                      : 'Inventario por Categorías'}
             </p>
           </div>
         </div>
@@ -673,6 +683,38 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
         </div>
       )}
 
+      {/* ── Filtro por estante ── */}
+      {uniqueEstantes.length > 0 && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex-shrink-0 flex items-center gap-1">
+            <MapPin size={10} className="text-indigo-400" /> Estante:
+          </span>
+          <button
+            onClick={() => setSelectedEstante(null)}
+            className={cn(
+              "px-3 py-1.5 rounded-2xl font-black text-xs transition-all",
+              !selectedEstante
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
+            )}>
+            Todos
+          </button>
+          {uniqueEstantes.map(est => (
+            <button
+              key={est}
+              onClick={() => setSelectedEstante(prev => prev === est ? null : est)}
+              className={cn(
+                "px-3 py-1.5 rounded-2xl font-black text-xs transition-all flex items-center gap-1",
+                selectedEstante === est
+                  ? "bg-indigo-500 text-white shadow-md shadow-indigo-200"
+                  : "bg-white text-gray-500 border border-gray-100 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100"
+              )}>
+              <MapPin size={10} /> Est. {est}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Warranties Section */}
       {warranties.length > 0 && (
         <div className="mb-12">
@@ -708,7 +750,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       )}
 
       <AnimatePresence mode="wait">
-        {!selectedCategoryId && !searchTerm && !selectedManufacturerId ? (
+        {!selectedCategoryId && !searchTerm && !selectedManufacturerId && !selectedEstante ? (
           <motion.div
             key="categories"
             initial={{ opacity: 0, x: -20 }}
