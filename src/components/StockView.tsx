@@ -104,7 +104,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedManufacturerId, setSelectedManufacturerId] = useState<string | null>(null);
-  const [selectedEstante, setSelectedEstante] = useState<string | null>(null);
+  const [selectedEstante, setSelectedEstante] = useState('');
+  const [selectedColumna, setSelectedColumna] = useState('');
+  const [selectedFila, setSelectedFila]   = useState('');
   
   const [newProduct, setNewProduct] = useState({
     model: '', categoryId: '', manufacturerId: undefined as string | undefined, quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: ''
@@ -175,9 +177,20 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const uniqueEstantes = Array.from(
-    new Set(products.map(p => parseLocation(p.location || '').estante).filter(Boolean))
-  ).sort();
+  const allEstantes = Array.from(new Set(products.map(p => parseLocation(p.location || '').estante).filter(Boolean))).sort();
+  const allColumnas = Array.from(new Set(
+    products
+      .filter(p => !selectedEstante || parseLocation(p.location || '').estante === selectedEstante)
+      .map(p => parseLocation(p.location || '').columna).filter(Boolean)
+  )).sort();
+  const allFilas = Array.from(new Set(
+    products
+      .filter(p => {
+        const loc = parseLocation(p.location || '');
+        return (!selectedEstante || loc.estante === selectedEstante) && (!selectedColumna || loc.columna === selectedColumna);
+      })
+      .map(p => parseLocation(p.location || '').fila).filter(Boolean)
+  )).sort();
 
   const filteredProducts = products.filter(p => {
     const q = searchTerm.toLowerCase();
@@ -192,7 +205,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     const matchesCategory = selectedCategoryId ? p.categoryId === selectedCategoryId : true;
     const matchesMfr = selectedManufacturerId ? p.manufacturerId === selectedManufacturerId : true;
     const matchesEstante = selectedEstante ? estante === selectedEstante : true;
-    return matchesSearch && matchesCategory && matchesMfr && matchesEstante;
+    const matchesColumna = selectedColumna ? columna === selectedColumna : true;
+    const matchesFila    = selectedFila    ? fila    === selectedFila    : true;
+    return matchesSearch && matchesCategory && matchesMfr && matchesEstante && matchesColumna && matchesFila;
   });
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -341,9 +356,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          {mainTab === 'stock' && (selectedCategoryId || selectedManufacturerId || selectedEstante) && (
+          {mainTab === 'stock' && (selectedCategoryId || selectedManufacturerId || selectedEstante || selectedColumna || selectedFila) && (
             <button
-              onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); setSelectedEstante(null); }}
+              onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); setSelectedEstante(''); setSelectedColumna(''); setSelectedFila(''); }}
               className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
             >
               <ArrowLeft size={24} />
@@ -357,8 +372,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   ? categories.find(c => c._id === selectedCategoryId)?.name
                   : selectedManufacturerId
                     ? manufacturers.find(m => m._id === selectedManufacturerId)?.name ?? 'Proveedor'
-                    : selectedEstante
-                      ? `Estante ${selectedEstante}`
+                    : (selectedEstante || selectedColumna || selectedFila)
+                      ? [selectedEstante && `Est. ${selectedEstante}`, selectedColumna && `Col. ${selectedColumna}`, selectedFila && `Fila ${selectedFila}`].filter(Boolean).join(' · ')
                       : 'Stock'}
             </h2>
             <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px] mt-1">
@@ -368,8 +383,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   ? 'Productos en esta categoría'
                   : selectedManufacturerId
                     ? 'Productos de este proveedor'
-                    : selectedEstante
-                      ? 'Productos en este estante'
+                    : (selectedEstante || selectedColumna || selectedFila)
+                      ? 'Productos en esta ubicación'
                       : 'Inventario por Categorías'}
             </p>
           </div>
@@ -683,35 +698,78 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
         </div>
       )}
 
-      {/* ── Filtro por estante ── */}
-      {uniqueEstantes.length > 0 && (
-        <div className="flex gap-2 flex-wrap items-center">
-          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex-shrink-0 flex items-center gap-1">
-            <MapPin size={10} className="text-indigo-400" /> Estante:
+      {/* ── Filtro por ubicación: Estante / Columna / Fila ── */}
+      {allEstantes.length > 0 && (
+        <div className="flex gap-3 flex-wrap items-center bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
+          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 flex-shrink-0">
+            <MapPin size={10} className="text-indigo-400" /> Ubicación:
           </span>
-          <button
-            onClick={() => setSelectedEstante(null)}
-            className={cn(
-              "px-3 py-1.5 rounded-2xl font-black text-xs transition-all",
-              !selectedEstante
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
-            )}>
-            Todos
-          </button>
-          {uniqueEstantes.map(est => (
-            <button
-              key={est}
-              onClick={() => setSelectedEstante(prev => prev === est ? null : est)}
+
+          {/* Estante */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Estante</span>
+            <select
+              value={selectedEstante}
+              onChange={e => { setSelectedEstante(e.target.value); setSelectedColumna(''); setSelectedFila(''); }}
               className={cn(
-                "px-3 py-1.5 rounded-2xl font-black text-xs transition-all flex items-center gap-1",
-                selectedEstante === est
-                  ? "bg-indigo-500 text-white shadow-md shadow-indigo-200"
-                  : "bg-white text-gray-500 border border-gray-100 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100"
-              )}>
-              <MapPin size={10} /> Est. {est}
+                "px-3 py-2 rounded-xl font-black text-xs border-2 outline-none transition-all cursor-pointer",
+                selectedEstante
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200"
+              )}
+            >
+              <option value="">Todos</option>
+              {allEstantes.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+
+          {/* Columna — solo si hay estante o hay columnas disponibles */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Columna</span>
+            <select
+              value={selectedColumna}
+              onChange={e => { setSelectedColumna(e.target.value); setSelectedFila(''); }}
+              disabled={allColumnas.length === 0}
+              className={cn(
+                "px-3 py-2 rounded-xl font-black text-xs border-2 outline-none transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+                selectedColumna
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200"
+              )}
+            >
+              <option value="">Todas</option>
+              {allColumnas.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Fila */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Fila</span>
+            <select
+              value={selectedFila}
+              onChange={e => setSelectedFila(e.target.value)}
+              disabled={allFilas.length === 0}
+              className={cn(
+                "px-3 py-2 rounded-xl font-black text-xs border-2 outline-none transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+                selectedFila
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200"
+              )}
+            >
+              <option value="">Todas</option>
+              {allFilas.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          {/* Limpiar filtro */}
+          {(selectedEstante || selectedColumna || selectedFila) && (
+            <button
+              onClick={() => { setSelectedEstante(''); setSelectedColumna(''); setSelectedFila(''); }}
+              className="mt-4 px-3 py-2 rounded-xl font-black text-xs text-gray-400 border border-gray-100 hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all"
+            >
+              ✕ Limpiar
             </button>
-          ))}
+          )}
         </div>
       )}
 
@@ -750,7 +808,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       )}
 
       <AnimatePresence mode="wait">
-        {!selectedCategoryId && !searchTerm && !selectedManufacturerId && !selectedEstante ? (
+        {!selectedCategoryId && !searchTerm && !selectedManufacturerId && !selectedEstante && !selectedColumna && !selectedFila ? (
           <motion.div
             key="categories"
             initial={{ opacity: 0, x: -20 }}
