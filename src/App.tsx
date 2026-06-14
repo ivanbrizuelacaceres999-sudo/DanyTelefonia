@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from './api';
+import { supabase, toClient } from './lib/supabase';
 import {
   requestPermission, initKnownIds, getSettings,
   checkWarranty, checkSales10, checkOldRepairs, checkWithdrawal,
@@ -79,11 +80,22 @@ function App() {
   const [restockSaving, setRestockSaving] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('phoneMasterUser');
-    if (savedUser) {
-      try { setUser(JSON.parse(savedUser)); } catch { localStorage.removeItem('phoneMasterUser'); }
-    }
-    setIsAuthReady(true);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const { data: profile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+        if (profile) setUser(toClient(profile));
+      }
+      setIsAuthReady(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') { setUser(null); setActiveTab('dashboard'); }
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        const { data: profile } = await supabase.from('users').select('*').eq('auth_id', session.user.id).single();
+        if (profile) setUser(toClient(profile));
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchData = async () => {
@@ -245,13 +257,9 @@ function App() {
     if (!restockModal) return;
     setRestockSaving(true);
     try {
-      await fetch(`/api/products/${restockModal.product._id}/restock`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          quantity:  parseInt(restockQty)  || 1,
-          costPrice: parseInt(restockCost) || restockModal.product.costPrice,
-        })
+      await api.restockProduct(restockModal.product._id, {
+        quantity:  parseInt(restockQty)  || 1,
+        costPrice: parseInt(restockCost) || restockModal.product.costPrice,
       });
       await fetchData();
       setRestockModal(null);
@@ -263,12 +271,10 @@ function App() {
   };
 
   const handleLogin  = (u: UserProfile) => {
-    localStorage.setItem('phoneMasterUser', JSON.stringify(u));
     setUser(u);
-    // Pedir permiso de notificaciones al loguearse
     requestPermission();
   };
-  const handleLogout = () => { localStorage.removeItem('phoneMasterUser'); setUser(null); setActiveTab('dashboard'); };
+  const handleLogout = async () => { await api.logout(); };
 
   const lowStockCount = products.filter(p => p.quantity <= 3).length;
   if (!isAuthReady) return null;

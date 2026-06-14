@@ -9,14 +9,19 @@ export const api = {
 
   // ─── Autenticación ──────────────────────────────────────────
   login: async (credentials: { name: string; password: string }) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('name', credentials.name)
-      .eq('password', credentials.password)
-      .single();
-    if (error || !data) throw new Error('Credenciales inválidas');
-    return toClient(data);
+    const email = credentials.name.toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]/g, '.').replace(/\.{2,}/g, '.').replace(/^\.|\.$/g, '')
+      + '@phonemaster.app';
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: credentials.password });
+    if (error || !data.user) throw new Error('Credenciales inválidas');
+    const { data: profile, error: profileErr } = await supabase
+      .from('users').select('*').eq('auth_id', data.user.id).single();
+    if (profileErr || !profile) throw new Error('Perfil no encontrado');
+    return toClient(profile);
+  },
+  logout: async () => {
+    await supabase.auth.signOut();
   },
 
   // ─── Usuarios ───────────────────────────────────────────────
@@ -25,18 +30,36 @@ export const api = {
     return toClient(data ?? []);
   },
   createUser: async (body: any) => {
-    const { data, error } = await supabase.from('users').insert(toDB(body)).select().single();
+    const { data, error } = await supabase.functions.invoke('manage-user', {
+      body: { action: 'create', name: body.name, password: body.password, role: body.role, weeklyWage: body.weeklyWage },
+    });
     if (error) throw new Error(error.message);
+    if (data?.error) throw new Error(data.error);
     await broadcast('users');
-    return toClient(data);
+    return toClient(data.user);
   },
   updateUser: async (id: string, body: any) => {
-    const { data } = await supabase.from('users').update(toDB(body)).eq('id', id).select().single();
+    const { password, ...rest } = body;
+    if (password) {
+      const { data: pwData, error: pwError } = await supabase.functions.invoke('manage-user', {
+        body: { action: 'update_password', id, password },
+      });
+      if (pwError || pwData?.error) throw new Error(pwData?.error ?? pwError?.message);
+    }
+    if (Object.keys(rest).length > 0) {
+      const { data } = await supabase.from('users').update(toDB(rest)).eq('id', id).select().single();
+      await broadcast('users');
+      return toClient(data);
+    }
     await broadcast('users');
-    return toClient(data);
+    return { ok: true };
   },
   deleteUser: async (id: string) => {
-    await supabase.from('users').delete().eq('id', id);
+    const { data, error } = await supabase.functions.invoke('manage-user', {
+      body: { action: 'delete', id },
+    });
+    if (error) throw new Error(error.message);
+    if (data?.error) throw new Error(data.error);
     await broadcast('users');
     return { ok: true };
   },
