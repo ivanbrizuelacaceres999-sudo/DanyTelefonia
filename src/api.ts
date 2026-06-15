@@ -167,6 +167,10 @@ export const api = {
     await broadcast('wholesalers');
     return { ok: true };
   },
+  getWholesalerSales: async (id: string) => {
+    const { data } = await supabase.from('sales').select('*').eq('wholesaler_id', id).order('date', { ascending: false });
+    return toClient(data ?? []);
+  },
   payWholesaler: async (id: string, amount: number, note?: string, collectedBy?: string) => {
     const { data: w } = await supabase.from('wholesalers').select('*').eq('id', id).single();
     if (!w) throw new Error('Mayorista no encontrado');
