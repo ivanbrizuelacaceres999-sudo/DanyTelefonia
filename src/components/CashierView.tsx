@@ -486,7 +486,15 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
     setPayments(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
 
   const updatePayment = (idx: number, field: 'method' | 'amount', value: string) =>
-    setPayments(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+    setPayments(prev => {
+      const updated = prev.map((p, i) => i === idx ? { ...p, [field]: value } : p);
+      if (field === 'method' && value === 'credit') {
+        const otherPaid = updated.filter((_, i) => i !== idx).reduce((s, p) => s + (parseInt(p.amount) || 0), 0);
+        const remaining = Math.max(0, total - otherPaid);
+        return updated.map((p, i) => i === idx ? { ...p, amount: String(remaining) } : p);
+      }
+      return updated;
+    });
 
   const checkout = async () => {
     if (cart.length === 0) { setErrorMsg('El carrito está vacío.'); return; }
@@ -1074,9 +1082,15 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                 <option value="qr">QR</option>
                 <option value="credit">Cta. May.</option>
               </select>
-              <NumericInput value={p.amount} placeholder="Monto"
-                onChange={raw => updatePayment(idx, 'amount', raw)}
-                className="w-28 bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-2 text-base font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+              {p.method === 'credit' ? (
+                <div className="w-28 bg-red-50 border border-red-100 rounded-xl py-2.5 px-2 text-sm font-black text-red-500 text-center">
+                  Gs. {n(p.amount).toLocaleString()}
+                </div>
+              ) : (
+                <NumericInput value={p.amount} placeholder="Monto"
+                  onChange={raw => updatePayment(idx, 'amount', raw)}
+                  className="w-28 bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-2 text-base font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+              )}
               {payments.length > 1 && (
                 <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer"><Trash2 size={13} /></button>
               )}
@@ -1153,9 +1167,15 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                     <button onClick={() => removePaymentRow(idx)} className="text-gray-300 hover:text-red-500 cursor-pointer shrink-0"><Trash2 size={11} /></button>
                   )}
                 </div>
-                <NumericInput value={p.amount} placeholder="Monto"
-                  onChange={raw => updatePayment(idx, 'amount', raw)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+                {p.method === 'credit' ? (
+                  <div className="w-full bg-red-50 border border-red-100 rounded-xl py-2 px-2 text-sm font-black text-red-500 text-center">
+                    Gs. {n(p.amount).toLocaleString()}
+                  </div>
+                ) : (
+                  <NumericInput value={p.amount} placeholder="Monto"
+                    onChange={raw => updatePayment(idx, 'amount', raw)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-2 text-sm font-black text-gray-700 outline-none text-center focus:border-indigo-400" />
+                )}
               </div>
             ))}
           </div>
