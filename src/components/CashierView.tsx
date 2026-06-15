@@ -3,12 +3,12 @@ import {
   Search, ShoppingCart, Trash2, Package, Wrench,
   DollarSign, Play, XCircle, ArrowRight, Tag, Plus,
   AlertTriangle, Minus, CheckCircle, Printer, ArrowDownLeft,
-  X, Settings2, ShoppingBag
+  X, Settings2, ShoppingBag, MapPin, Zap
 } from 'lucide-react';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { AnimatePresence, motion } from 'motion/react';
 import { api } from '../api';
-import { Product, Repair, Wholesaler, Sale, CashSession, UserProfile, CashWithdrawal, WithdrawalMotive, ReventaItem, ReventaSupplier } from '../types';
+import { Product, Repair, Wholesaler, Sale, CashSession, UserProfile, CashWithdrawal, WithdrawalMotive, ReventaItem, ReventaSupplier, Category, Manufacturer } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { cn } from '../lib/utils';
@@ -20,9 +20,31 @@ interface CashierViewProps {
   wholesalers: Wholesaler[];
   reventaItems?: ReventaItem[];
   reventaSuppliers?: ReventaSupplier[];
+  categories: Category[];
+  manufacturers: Manufacturer[];
   onRefresh: () => void;
   scanProduct?: Product | null;
   onScanHandled?: () => void;
+}
+
+interface QuickProductForm {
+  model: string;
+  categoryId: string;
+  manufacturerId: string;
+  costPrice: string;
+  salePrice: string;
+  priceWholesale: string;
+  priceCheap: string;
+  quantity: string;
+}
+
+interface StockCompletionForm {
+  productId: string;
+  model: string;
+  estante: string;
+  columna: string;
+  fila: string;
+  quantity: string;
 }
 
 // Convierte cualquier valor a número seguro
@@ -177,7 +199,7 @@ const printTicket = (sale: Sale) => {
   }, 400);
 };
 
-export const CashierView = ({ user, products, repairs, wholesalers, reventaItems = [], reventaSuppliers = [], onRefresh, scanProduct, onScanHandled }: CashierViewProps) => {
+export const CashierView = ({ user, products, repairs, wholesalers, reventaItems = [], reventaSuppliers = [], categories, manufacturers, onRefresh, scanProduct, onScanHandled }: CashierViewProps) => {
   const [session, setSession] = useState<CashSession | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [isOpeningSession, setIsOpeningSession] = useState(false);
@@ -255,9 +277,95 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   const [discountType,  setDiscountType]  = useState<'gs' | 'pct'>('gs');
   const [addModal, setAddModal] = useState<{
     type: 'product'; product: Product;
-    qty: string; priceType: PriceType;
+    qty: string; priceType: PriceType; pendingPrice: string;
   } | { type: 'repair'; repair: Repair } | { type: 'reventa'; item: ReventaItem; qty: string }
     | { type: 'new-reventa'; name: string; salePrice: string; costPrice: string; supplierId: string; qty: string } | null>(null);
+
+  // ── Producto rápido desde caja ────────────────────────────────
+  const [quickModal, setQuickModal] = useState<QuickProductForm | null>(null);
+  const [quickCreating, setQuickCreating] = useState(false);
+  const [quickCreatedIds, setQuickCreatedIds] = useState<string[]>([]);
+
+  // ── Completar stock post-venta ────────────────────────────────
+  const [stockCompletion, setStockCompletion]       = useState<StockCompletionForm | null>(null);
+  const [pendingCompletions, setPendingCompletions] = useState<{ id: string; model: string }[]>([]);
+  const [stockSaving, setStockSaving]               = useState(false);
+
+  const handleQuickCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickModal) return;
+    const sp = parseInt(quickModal.salePrice.replace(/\D/g, '')) || 0;
+    const pw = parseInt(quickModal.priceWholesale.replace(/\D/g, '')) || 0;
+    const pc = parseInt(quickModal.priceCheap.replace(/\D/g, '')) || 0;
+    if (!quickModal.model.trim() || (sp === 0 && pw === 0 && pc === 0)) {
+      setErrorMsg('Completá el nombre y al menos un precio de venta.');
+      return;
+    }
+    const qty = Math.max(1, parseInt(quickModal.quantity) || 1);
+    setQuickCreating(true);
+    try {
+      const created = await api.createProduct({
+        model: quickModal.model.trim().toUpperCase(),
+        categoryId: quickModal.categoryId || null,
+        manufacturerId: quickModal.manufacturerId || undefined,
+        costPrice: parseInt(quickModal.costPrice.replace(/\D/g, '')) || 0,
+        salePrice: sp,
+        priceWholesale: pw,
+        priceCheap: pc,
+        quantity: qty,
+        purchasedQuantity: qty,
+        location: '',
+        isWholesale: false,
+        barcode: '',
+      });
+      const cartPrice = sp > 0 ? sp : pw > 0 ? pw : pc;
+      const priceType: PriceType = sp > 0 ? 'normal' : pw > 0 ? 'wholesale' : 'cheap';
+      setCart(prev => [...prev, {
+        id: created._id,
+        type: 'product' as const,
+        name: created.model,
+        price: cartPrice,
+        cost: parseInt(quickModal.costPrice.replace(/\D/g, '')) || 0,
+        quantity: 1,
+        priceType,
+      }]);
+      setQuickCreatedIds(prev => [...prev, created._id]);
+      setQuickModal(null);
+      setErrorMsg('');
+      onRefresh();
+      if (window.innerWidth < 768) setMobileView('ticket');
+    } catch (err: any) {
+      setErrorMsg('Error al crear producto: ' + (err?.message ?? 'Error desconocido'));
+    } finally {
+      setQuickCreating(false);
+    }
+  };
+
+  const openNextStockCompletion = (remaining: { id: string; model: string }[]) => {
+    if (remaining.length === 0) { setStockCompletion(null); return; }
+    const [next, ...rest] = remaining;
+    setStockCompletion({ productId: next.id, model: next.model, estante: '', columna: '', fila: '', quantity: '' });
+    setPendingCompletions(rest);
+  };
+
+  const handleStockCompletion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockCompletion) return;
+    setStockSaving(true);
+    try {
+      const loc = [stockCompletion.estante, stockCompletion.columna, stockCompletion.fila].join('|');
+      await api.updateProduct(stockCompletion.productId, {
+        location: loc,
+        quantity: parseInt(stockCompletion.quantity) || 0,
+      });
+      onRefresh();
+      openNextStockCompletion(pendingCompletions);
+    } catch (err: any) {
+      alert('Error al guardar: ' + (err?.message ?? 'Error'));
+    } finally {
+      setStockSaving(false);
+    }
+  };
 
   const loadSession = async () => {
     setLoadingSession(true);
@@ -372,6 +480,9 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
     if (totalPaid < total) { setErrorMsg(`Falta cubrir Gs. ${resta.toLocaleString()} para completar el pago.`); return; }
     if (totalPaid > total) { setErrorMsg(`El monto pagado excede el total en Gs. ${vuelto.toLocaleString()}.`); return; }
 
+    // Capturar productos rápidos de este carrito ANTES de vaciarlo
+    const quickSold = cart.filter(i => quickCreatedIds.includes(i.id));
+
     setIsProcessing(true); setErrorMsg(''); setSuccessMsg('');
     try {
       const paymentsData = payments
@@ -399,6 +510,14 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
       setSuccessMsg(`✓ Venta registrada · Gs. ${n(sale.total).toLocaleString()}`);
       onRefresh(); loadSession();
       printTicket(sale);
+
+      // ── Lanzar completar stock para productos rápidos ──
+      if (quickSold.length > 0) {
+        setQuickCreatedIds([]);
+        const [first, ...rest] = quickSold;
+        setStockCompletion({ productId: first.id, model: first.name, estante: '', columna: '', fila: '', quantity: '' });
+        setPendingCompletions(rest.map(i => ({ id: i.id, model: i.name })));
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al procesar la venta');
     } finally { setIsProcessing(false); }
@@ -458,8 +577,13 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
 
   const allMotives = customMotives.map(m => ({ id: m._id, name: m.name }));
 
+  const hasLocation = (p: Product) =>
+    (p.location || '').replace(/\|/g, '').trim().length > 0;
+
   const filteredProducts = products.filter(p =>
-    n(p.quantity) > 0 && (!searchTerm || p.model.toLowerCase().includes(searchTerm.toLowerCase()))
+    n(p.quantity) > 0 &&
+    hasLocation(p) &&
+    (!searchTerm || p.model.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   // Solo reparaciones con estado 'listo' — se entregan al cobrar
   const readyRepairs = repairs.filter(r =>
@@ -480,7 +604,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   ];
 
   // ── Agregar producto desde modal ─────────────────────────────────
-  const addFromModal = () => {
+  const addFromModal = async () => {
     if (!addModal) return;
     if (addModal.type === 'new-reventa') {
       const qty = Math.max(1, parseInt(addModal.qty) || 1);
@@ -525,6 +649,23 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
     const p = addModal.product;
     const quantity = Math.max(1, parseInt(addModal.qty) || 1);
     const stock = n(p.quantity);
+    const hasNoPrice = n(p.salePrice) === 0 && n(p.priceWholesale) === 0 && n(p.priceCheap) === 0;
+
+    // Si no tiene precio, guardar el precio ingresado en la DB
+    if (hasNoPrice) {
+      const newPrice = parseInt((addModal.pendingPrice || '').replace(/\D/g, '')) || 0;
+      if (newPrice === 0) { setErrorMsg('Ingresá un precio de venta para continuar.'); return; }
+      const priceField = addModal.priceType === 'wholesale' ? { priceWholesale: newPrice }
+        : addModal.priceType === 'cheap'     ? { priceCheap: newPrice }
+        : { salePrice: newPrice };
+      try {
+        await api.updateProduct(p._id, priceField);
+        onRefresh();
+        // Actualizar p localmente para el carrito
+        Object.assign(p, priceField);
+      } catch { setErrorMsg('Error al guardar el precio.'); return; }
+    }
+
     const price =
       addModal.priceType === 'wholesale' && n(p.priceWholesale) > 0 ? n(p.priceWholesale) :
       addModal.priceType === 'cheap'     && n(p.priceCheap)     > 0 ? n(p.priceCheap)     :
@@ -697,6 +838,11 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Catalogo</p>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setQuickModal({ model: '', categoryId: '', manufacturerId: '', costPrice: '', salePrice: '', priceWholesale: '', priceCheap: '', quantity: '1' })}
+                className="text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200">
+                <Zap size={10} /> Nuevo Prod.
+              </button>
+              <button
                 onClick={() => setAddModal({ type: 'new-reventa', name: '', salePrice: '', costPrice: '', supplierId: '', qty: '1' })}
                 className="text-[10px] font-black text-orange-500 bg-orange-50 hover:bg-orange-100 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-colors cursor-pointer border border-orange-200">
                 <Plus size={10} /> Reventa
@@ -718,7 +864,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                     const inCart = !!cart.find(c => c.id === p._id);
                     return (
                       <button key={p._id}
-                        onClick={() => setAddModal({ type: 'product', product: p, qty: '1', priceType: 'normal' })}
+                        onClick={() => setAddModal({ type: 'product', product: p, qty: '1', priceType: 'normal', pendingPrice: '' })}
                         className={cn('flex flex-col p-4 rounded-2xl border text-left transition-all cursor-pointer active:scale-[0.98] hover:shadow-md',
                           inCart ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:border-indigo-200')}>
                         <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3',
@@ -1174,64 +1320,119 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                 </div>
               </div>
             ) : (
-              <div className="space-y-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600"><Package size={28} /></div>
-                  <div>
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Agregar al ticket</p>
-                    <h3 className="text-xl font-black text-gray-800">{addModal.product.model}</h3>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Stock: {addModal.product.quantity}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Precio</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {([
-                      { key: 'normal'    as PriceType, label: 'Normal',    price: n(addModal.product.salePrice) },
-                      { key: 'wholesale' as PriceType, label: 'Mayorista', price: n(addModal.product.priceWholesale) },
-                      { key: 'cheap'     as PriceType, label: 'Economico', price: n(addModal.product.priceCheap) },
-                    ].filter(o => o.price > 0)).map(opt => (
-                      <button key={opt.key}
-                        onClick={() => setAddModal(prev => prev?.type === 'product' ? {...prev, priceType: opt.key} : prev)}
-                        className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center transition-all cursor-pointer',
-                          addModal.priceType === opt.key
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                            : 'bg-gray-50 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700')}>
-                        <span className="text-[9px] uppercase tracking-widest">{opt.label}</span>
-                        <span className="text-sm mt-1">Gs. {opt.price.toLocaleString()}</span>
+              (() => {
+                const p = addModal.product;
+                const hasNoPrice = n(p.salePrice) === 0 && n(p.priceWholesale) === 0 && n(p.priceCheap) === 0;
+                const pendingAmt = parseInt((addModal.pendingPrice || '').replace(/\D/g, '')) || 0;
+                const cartTotal = hasNoPrice
+                  ? pendingAmt * parseInt(addModal.qty || '1')
+                  : n(addModal.priceType === 'wholesale' ? p.priceWholesale : addModal.priceType === 'cheap' ? p.priceCheap : p.salePrice) * parseInt(addModal.qty || '1');
+                return (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-4">
+                      <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center", hasNoPrice ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600')}>
+                        <Package size={28} />
+                      </div>
+                      <div>
+                        <p className={cn("text-[10px] font-black uppercase tracking-widest", hasNoPrice ? 'text-amber-500' : 'text-indigo-500')}>
+                          {hasNoPrice ? 'Sin precio — asignar ahora' : 'Agregar al ticket'}
+                        </p>
+                        <h3 className="text-xl font-black text-gray-800">{p.model}</h3>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Stock: {p.quantity}</p>
+                      </div>
+                    </div>
+
+                    {hasNoPrice ? (
+                      /* ── Producto sin precio: ingresar y elegir tipo ── */
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                          Precio de venta <span className="text-red-400">*</span>
+                        </p>
+                        <NumericInput
+                          value={addModal.pendingPrice}
+                          onChange={raw => setAddModal(prev => prev?.type === 'product' ? { ...prev, pendingPrice: raw } : prev)}
+                          placeholder="0"
+                          className="w-full p-4 bg-amber-50 border-2 border-amber-200 focus:border-amber-500 focus:bg-white rounded-2xl outline-none font-black text-2xl text-center transition-all"
+                        />
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            { key: 'normal'    as PriceType, label: 'Normal',    emoji: '🏷️' },
+                            { key: 'wholesale' as PriceType, label: 'Mayorista', emoji: '🏪' },
+                            { key: 'cheap'     as PriceType, label: 'Tacaño',    emoji: '💸' },
+                          ]).map(opt => (
+                            <button key={opt.key}
+                              onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, priceType: opt.key } : prev)}
+                              className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center transition-all cursor-pointer text-sm',
+                                addModal.priceType === opt.key
+                                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-200'
+                                  : 'bg-gray-50 text-gray-500 hover:bg-amber-50 hover:text-amber-700')}>
+                              <span className="text-base">{opt.emoji}</span>
+                              <span className="text-[9px] uppercase tracking-widest mt-0.5">{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[9px] font-bold text-gray-400 text-center">
+                          Se guarda como precio <span className="font-black text-gray-600">{addModal.priceType === 'wholesale' ? 'Mayorista' : addModal.priceType === 'cheap' ? 'Tacaño' : 'Normal'}</span> del producto
+                        </p>
+                      </div>
+                    ) : (
+                      /* ── Producto con precio: selector normal ── */
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Precio</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            { key: 'normal'    as PriceType, label: 'Normal',    price: n(p.salePrice) },
+                            { key: 'wholesale' as PriceType, label: 'Mayorista', price: n(p.priceWholesale) },
+                            { key: 'cheap'     as PriceType, label: 'Economico', price: n(p.priceCheap) },
+                          ].filter(o => o.price > 0)).map(opt => (
+                            <button key={opt.key}
+                              onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, priceType: opt.key } : prev)}
+                              className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center transition-all cursor-pointer',
+                                addModal.priceType === opt.key
+                                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                  : 'bg-gray-50 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700')}>
+                              <span className="text-[9px] uppercase tracking-widest">{opt.label}</span>
+                              <span className="text-sm mt-1">Gs. {opt.price.toLocaleString()}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad</p>
+                      <div className="flex items-center justify-center gap-4 bg-gray-50 rounded-2xl py-4">
+                        <button onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, qty: String(Math.max(1, parseInt(prev.qty || '1') - 1)) } : prev)}
+                          className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all cursor-pointer text-lg">-</button>
+                        <span className="text-4xl font-black text-gray-800 w-12 text-center">{addModal.qty || '1'}</span>
+                        <button onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, qty: String(Math.min(n(prev.product.quantity), parseInt(prev.qty || '1') + 1)) } : prev)}
+                          className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 shadow-sm transition-all cursor-pointer text-lg">+</button>
+                      </div>
+                    </div>
+
+                    {cartTotal > 0 && (
+                      <div className={cn("flex items-center justify-between p-4 rounded-2xl", hasNoPrice ? 'bg-amber-50' : 'bg-indigo-50')}>
+                        <span className="font-black text-gray-700">{addModal.qty || 1} × {p.model}</span>
+                        <span className={cn("font-black text-xl", hasNoPrice ? 'text-amber-700' : 'text-indigo-700')}>
+                          Gs. {cartTotal.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <button onClick={() => setAddModal(null)} className="flex-1 py-3 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">Cancelar</button>
+                      <button onClick={addFromModal}
+                        disabled={hasNoPrice && pendingAmt === 0}
+                        className={cn("flex-1 py-3 rounded-2xl text-white font-black shadow-xl cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all",
+                          hasNoPrice
+                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200'
+                            : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200')}>
+                        <Plus size={16} /> {hasNoPrice ? 'Guardar precio y agregar' : 'Agregar al ticket'}
                       </button>
-                    ))}
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad</p>
-                  <div className="flex items-center justify-center gap-4 bg-gray-50 rounded-2xl py-4">
-                    <button
-                      onClick={() => setAddModal(prev => prev?.type === 'product' ? {...prev, qty: String(Math.max(1, parseInt(prev.qty||'1')-1))} : prev)}
-                      className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all cursor-pointer text-lg">
-                      -
-                    </button>
-                    <span className="text-4xl font-black text-gray-800 w-12 text-center">{addModal.qty || '1'}</span>
-                    <button
-                      onClick={() => setAddModal(prev => prev?.type === 'product' ? {...prev, qty: String(Math.min(n(prev.product.quantity), parseInt(prev.qty||'1')+1))} : prev)}
-                      className="w-10 h-10 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 shadow-sm transition-all cursor-pointer text-lg">
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-indigo-50 rounded-2xl">
-                  <span className="font-black text-gray-700">{addModal.qty || 1} x {addModal.product.model}</span>
-                  <span className="font-black text-indigo-700 text-xl">
-                    Gs. {(n(addModal.priceType === 'wholesale' ? addModal.product.priceWholesale : addModal.priceType === 'cheap' ? addModal.product.priceCheap : addModal.product.salePrice) * parseInt(addModal.qty||'1')).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setAddModal(null)} className="flex-1 py-3 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">Cancelar</button>
-                  <button onClick={addFromModal} className="flex-1 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 shadow-xl shadow-indigo-200 cursor-pointer flex items-center justify-center gap-2">
-                    <Plus size={16} /> Agregar al ticket
-                  </button>
-                </div>
-              </div>
+                );
+              })()
             )}
           </motion.div>
         </motion.div>
@@ -1431,6 +1632,220 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         onCancel={() => setPendingConfirm(null)}
       />
     )}
+
+    {/* ── MODAL: Nuevo Producto Rápido ── */}
+    <AnimatePresence>
+      {quickModal && (
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div initial={{scale:0.9,y:20}} animate={{scale:1,y:0}} exit={{scale:0.9,y:20}}
+            className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+                <Zap size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Carga rápida</p>
+                <h3 className="text-xl font-black text-gray-800">Nuevo Producto</h3>
+              </div>
+              <button onClick={() => setQuickModal(null)} className="ml-auto text-gray-300 hover:text-gray-600 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleQuickCreate} className="space-y-5">
+              {/* Nombre */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">
+                  Nombre <span className="text-red-400">*</span>
+                </label>
+                <input
+                  required autoFocus
+                  value={quickModal.model}
+                  onChange={e => setQuickModal(p => p ? { ...p, model: e.target.value.toUpperCase() } : p)}
+                  placeholder="EJ: IPHONE 13 128GB"
+                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all uppercase"
+                />
+              </div>
+
+              {/* Precios */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Precio de Venta <span className="text-red-400">* (al menos uno)</span>
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-1 block mb-1">Normal (Gs.)</label>
+                    <NumericInput
+                      value={quickModal.salePrice}
+                      onChange={raw => setQuickModal(p => p ? { ...p, salePrice: raw } : p)}
+                      placeholder="0"
+                      className="w-full p-3 bg-emerald-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-black text-purple-500 uppercase tracking-widest ml-1 block mb-1">🏪 Mayorista (Gs.)</label>
+                      <NumericInput
+                        value={quickModal.priceWholesale}
+                        onChange={raw => setQuickModal(p => p ? { ...p, priceWholesale: raw } : p)}
+                        placeholder="0"
+                        className="w-full p-3 bg-purple-50 border-2 border-transparent focus:border-purple-400 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1 block mb-1">💸 Tacaño (Gs.)</label>
+                      <NumericInput
+                        value={quickModal.priceCheap}
+                        onChange={raw => setQuickModal(p => p ? { ...p, priceCheap: raw } : p)}
+                        placeholder="0"
+                        className="w-full p-3 bg-orange-50 border-2 border-transparent focus:border-orange-400 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Costo */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Costo (opc.)</label>
+                <NumericInput
+                  value={quickModal.costPrice}
+                  onChange={raw => setQuickModal(p => p ? { ...p, costPrice: raw } : p)}
+                  placeholder="0"
+                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-gray-300 focus:bg-white rounded-2xl outline-none font-black text-sm transition-all"
+                />
+              </div>
+
+              {/* Cantidad */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Cantidad en Stock</label>
+                <div className="flex items-center gap-3 bg-gray-50 rounded-2xl p-3">
+                  <button type="button"
+                    onClick={() => setQuickModal(p => p ? { ...p, quantity: String(Math.max(1, parseInt(p.quantity||'1') - 1)) } : p)}
+                    className="w-9 h-9 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-red-500 hover:bg-red-50 shadow-sm transition-all cursor-pointer text-xl">-</button>
+                  <span className="flex-1 text-3xl font-black text-gray-800 text-center">{quickModal.quantity || '1'}</span>
+                  <button type="button"
+                    onClick={() => setQuickModal(p => p ? { ...p, quantity: String(parseInt(p.quantity||'1') + 1) } : p)}
+                    className="w-9 h-9 bg-white rounded-xl flex items-center justify-center font-black text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 shadow-sm transition-all cursor-pointer text-xl">+</button>
+                </div>
+              </div>
+
+              {/* Categoría + Fabricante */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Categoría (opc.)</label>
+                  <select
+                    value={quickModal.categoryId}
+                    onChange={e => setQuickModal(p => p ? { ...p, categoryId: e.target.value } : p)}
+                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all cursor-pointer">
+                    <option value="">Sin categoría</option>
+                    {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Fabricante (opc.)</label>
+                  <select
+                    value={quickModal.manufacturerId}
+                    onChange={e => setQuickModal(p => p ? { ...p, manufacturerId: e.target.value } : p)}
+                    className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all cursor-pointer">
+                    <option value="">Sin fabricante</option>
+                    {manufacturers.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {errorMsg && (
+                <p className="text-sm font-black text-red-500 bg-red-50 p-3 rounded-2xl">{errorMsg}</p>
+              )}
+
+              <button type="submit" disabled={quickCreating}
+                className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                {quickCreating
+                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Creando…</>
+                  : <><Zap size={18} /> Crear y agregar al ticket</>
+                }
+              </button>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* ── MODAL: Completar Stock post-venta ── */}
+    <AnimatePresence>
+      {stockCompletion && (
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div initial={{scale:0.9,y:20}} animate={{scale:1,y:0}} exit={{scale:0.9,y:20}}
+            className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-sm">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
+                <MapPin size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">¡Producto vendido!</p>
+                <h3 className="text-lg font-black text-gray-800 leading-snug">Completar stock</h3>
+              </div>
+            </div>
+            <p className="text-sm font-bold text-gray-500 mb-6 ml-1">
+              <span className="font-black text-gray-700">{stockCompletion.model}</span> — indicá dónde está y cuántos tenés.
+              {pendingCompletions.length > 0 && (
+                <span className="ml-1 text-[10px] font-black text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  +{pendingCompletions.length} más
+                </span>
+              )}
+            </p>
+            <form onSubmit={handleStockCompletion} className="space-y-5">
+              {/* Ubicación */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 mb-2">
+                  <MapPin size={10} className="text-indigo-400" /> Ubicación <span className="text-red-400">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['estante','columna','fila'] as const).map((field, i) => (
+                    <div key={field} className="space-y-1">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest text-center">
+                        {field === 'estante' ? 'Estante' : field === 'columna' ? 'Columna' : 'Fila'}
+                      </p>
+                      <input
+                        required
+                        value={stockCompletion[field]}
+                        onChange={e => setStockCompletion(p => p ? { ...p, [field]: e.target.value } : p)}
+                        placeholder={i === 0 ? '1' : i === 1 ? 'A' : '3'}
+                        className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-black text-center text-lg transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cantidad actual */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                  Cantidad actual en stock <span className="text-red-400">*</span>
+                </label>
+                <NumericInput
+                  required
+                  value={stockCompletion.quantity}
+                  onChange={raw => setStockCompletion(p => p ? { ...p, quantity: raw } : p)}
+                  placeholder="0"
+                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none font-black text-2xl text-center transition-all"
+                />
+              </div>
+
+              <button type="submit" disabled={stockSaving}
+                className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-200 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                {stockSaving
+                  ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando…</>
+                  : <><CheckCircle size={18} /> Guardar y continuar</>
+                }
+              </button>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </>
   );
 };

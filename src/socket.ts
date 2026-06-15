@@ -13,7 +13,7 @@ export type UpdateEvent =
   | 'repair-types' | 'warranties' | 'sessions'
   | 'cash-withdrawals' | 'withdrawal-motives'
   | 'reventa-items' | 'reventa-suppliers'
-  | 'manufacturers';
+  | 'manufacturers' | 'stock-movements';
 
 type Handler = (payload: { event: UpdateEvent }) => void;
 

@@ -316,7 +316,7 @@ export const api = {
     await broadcast('products');
     return toClient(data);
   },
-  restockProduct: async (id: string, body: { quantity: number; costPrice: number }) => {
+  restockProduct: async (id: string, body: { quantity: number; costPrice: number; userId?: string; note?: string }) => {
     const { data: prod } = await supabase.from('products').select('*').eq('id', id).single();
     if (!prod) throw new Error('Producto no encontrado');
     const batches = [...(prod.batches ?? []), { quantity: body.quantity, costPrice: body.costPrice, date: new Date().toISOString() }];
@@ -326,8 +326,39 @@ export const api = {
       cost_price: body.costPrice,
       batches,
     }).eq('id', id).select().single();
+    // Registrar en historial de movimientos
+    await supabase.from('stock_movements').insert({
+      product_id: id,
+      user_id: body.userId || null,
+      quantity: body.quantity,
+      cost_price: body.costPrice,
+      note: body.note || null,
+    });
     await broadcast('products');
+    await broadcast('stock-movements');
     return toClient(data);
+  },
+
+  getStockMovements: async (params?: { productId?: string; limit?: number }) => {
+    let query = supabase
+      .from('stock_movements')
+      .select('*, products(model, category_id, categories(name)), users(name)')
+      .order('created_at', { ascending: false });
+    if (params?.productId) query = query.eq('product_id', params.productId);
+    if (params?.limit) query = query.limit(params.limit);
+    const { data } = await query;
+    return (data ?? []).map((m: any) => ({
+      _id: m.id,
+      productId: m.product_id,
+      userId: m.user_id,
+      quantity: m.quantity,
+      costPrice: m.cost_price,
+      note: m.note,
+      createdAt: m.created_at,
+      productModel: m.products?.model ?? '',
+      categoryName: m.products?.categories?.name ?? '',
+      userName: m.users?.name ?? '',
+    }));
   },
   deleteProduct: async (id: string) => {
     await supabase.from('products').delete().eq('id', id);

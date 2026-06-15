@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, Search, Trash2, CheckCircle, XCircle, AlertCircle, Package, DollarSign, Clock, Settings, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Search, Trash2, CheckCircle, XCircle, AlertCircle, Package, DollarSign, Clock, Settings, RefreshCw, TrendingDown, Award, Factory } from 'lucide-react';
 import { api } from '../api';
-import { Warranty, WarrantyConfig, Product, Sale } from '../types';
+import { Warranty, WarrantyConfig, Product, Sale, Manufacturer } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput as NumInput } from './ui/NumericInput';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -11,16 +11,17 @@ import { cn } from '../lib/utils';
 interface WarrantyViewProps {
   sales: Sale[];
   products: Product[];
+  manufacturers: Manufacturer[];
   onRefresh: () => void;
 }
 
 
 
-export const WarrantyView = ({ sales, products, onRefresh }: WarrantyViewProps) => {
+export const WarrantyView = ({ sales, products, manufacturers, onRefresh }: WarrantyViewProps) => {
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [config, setConfig] = useState<WarrantyConfig | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'active' | 'expired' | 'defective' | 'config'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'expired' | 'defective' | 'manufacturers'>('active');
   const [showConfig, setShowConfig] = useState(false);
   const [defaultDays, setDefaultDays] = useState('2');
   const [productDaysMap, setProductDaysMap] = useState<Record<string, string>>({});
@@ -76,9 +77,39 @@ export const WarrantyView = ({ sales, products, onRefresh }: WarrantyViewProps) 
     return matchSearch;
   });
 
-  const activeCount = warranties.filter(w => w.status === 'active').length;
-  const expiredCount = warranties.filter(w => w.status === 'expired').length;
+  const activeCount    = warranties.filter(w => w.status === 'active').length;
+  const expiredCount   = warranties.filter(w => w.status === 'expired').length;
   const defectiveCount = warranties.filter(w => w.status === 'defective' || w.status === 'loss').length;
+
+  // ── Estadísticas por fabricante ───────────────────────────────
+  const productMfrMap = new Map(products.map(p => [p._id, p.manufacturerId]));
+
+  interface MfrStat {
+    id: string; name: string;
+    total: number; losses: number; resolved: number; pending: number;
+    warranties: Warranty[];
+  }
+
+  const mfrStatsMap = new Map<string, MfrStat>();
+
+  warranties
+    .filter(w => w.status === 'defective' || w.status === 'loss' || w.status === 'resolved_by_provider')
+    .forEach(w => {
+      const mfrId   = productMfrMap.get(w.productId) || '__none__';
+      const mfrName = manufacturers.find(m => m._id === mfrId)?.name || 'Sin fabricante';
+      if (!mfrStatsMap.has(mfrId)) {
+        mfrStatsMap.set(mfrId, { id: mfrId, name: mfrName, total: 0, losses: 0, resolved: 0, pending: 0, warranties: [] });
+      }
+      const s = mfrStatsMap.get(mfrId)!;
+      s.total++;
+      s.warranties.push(w);
+      if (w.status === 'loss')                 s.losses++;
+      if (w.status === 'resolved_by_provider') s.resolved++;
+      if (w.status === 'defective')            s.pending++;
+    });
+
+  const mfrRanking = Array.from(mfrStatsMap.values()).sort((a, b) => b.total - a.total);
+  const maxFails   = mfrRanking[0]?.total ?? 1;
 
   const getDaysLeft = (expiresAt: string) => {
     const diff = new Date(expiresAt).getTime() - Date.now();
@@ -114,15 +145,17 @@ export const WarrantyView = ({ sales, products, onRefresh }: WarrantyViewProps) 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { key: 'active', label: `En Garantía (${activeCount})`, color: 'emerald' },
-          { key: 'expired', label: `Expiradas / Ganancia (${expiredCount})`, color: 'gray' },
-          { key: 'defective', label: `Productos Defectuosos (${defectiveCount})`, color: 'red' },
+          { key: 'active',        label: `En Garantía (${activeCount})`,          color: 'emerald' },
+          { key: 'expired',       label: `Expiradas / Ganancia (${expiredCount})`, color: 'gray'    },
+          { key: 'defective',     label: `Defectuosos (${defectiveCount})`,        color: 'red'     },
+          { key: 'manufacturers', label: `Por Fabricante (${mfrRanking.length})`,  color: 'violet'  },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
             className={cn("px-5 py-2.5 rounded-2xl font-black text-sm transition-all",
               activeTab === tab.key
                 ? tab.color === 'emerald' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                  : tab.color === 'red' ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                  : tab.color === 'red'    ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                  : tab.color === 'violet' ? 'bg-violet-600 text-white shadow-lg shadow-violet-200'
                   : 'bg-gray-800 text-white'
                 : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50')}>
             {tab.label}
@@ -242,6 +275,165 @@ export const WarrantyView = ({ sales, products, onRefresh }: WarrantyViewProps) 
           </div>
         )}
       </div>
+
+      {/* ══════════════════════════════════════════
+          PESTAÑA: POR FABRICANTE
+          ══════════════════════════════════════════ */}
+      {activeTab === 'manufacturers' && (
+        <div className="space-y-8">
+          {mfrRanking.length === 0 ? (
+            <div className="text-center py-20 text-gray-300">
+              <Factory size={48} className="mx-auto mb-4" />
+              <p className="font-black uppercase tracking-widest text-sm">Sin productos defectuosos registrados</p>
+            </div>
+          ) : (
+            <>
+              {/* ── Ranking / Stats ── */}
+              <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center text-violet-600">
+                    <TrendingDown size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-gray-800 text-lg tracking-tight">Ranking de fallos por fabricante</h3>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Defectuosos + pérdidas + repuestos por proveedor</p>
+                  </div>
+                </div>
+
+                {mfrRanking.map((mfr, idx) => {
+                  const pct       = Math.round((mfr.total / maxFails) * 100);
+                  const isWorst   = idx === 0 && mfr.total > 0;
+                  const barColor  = mfr.losses > mfr.resolved
+                    ? 'bg-red-500'
+                    : mfr.total > 3
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400';
+                  return (
+                    <div key={mfr.id} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {isWorst && <span className="text-sm">🔴</span>}
+                          <span className="font-black text-gray-800 text-sm">{mfr.name}</span>
+                          {isWorst && (
+                            <span className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-red-100">
+                              Más fallos
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] font-black">
+                          <span className="text-red-500 bg-red-50 px-2 py-0.5 rounded-full">{mfr.total} defectos</span>
+                          {mfr.losses > 0 && (
+                            <span className="text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">{mfr.losses} pérdidas</span>
+                          )}
+                          {mfr.resolved > 0 && (
+                            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{mfr.resolved} repuestos</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all', barColor)}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Cards agrupadas por fabricante ── */}
+              {mfrRanking.map(mfr => (
+                <div key={mfr.id} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center text-violet-600">
+                      <Factory size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-gray-800 text-lg tracking-tight">{mfr.name}</h3>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        {mfr.total} defecto{mfr.total !== 1 ? 's' : ''}
+                        {mfr.pending > 0  && ` · ${mfr.pending} pendiente${mfr.pending !== 1 ? 's' : ''}`}
+                        {mfr.losses > 0   && ` · ${mfr.losses} pérdida${mfr.losses !== 1 ? 's' : ''}`}
+                        {mfr.resolved > 0 && ` · ${mfr.resolved} repuesto${mfr.resolved !== 1 ? 's' : ''}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {mfr.warranties.map(w => {
+                      const daysLeft = getDaysLeft(w.expiresAt);
+                      return (
+                        <div key={w._id}
+                          className={cn('bg-white p-5 rounded-[28px] border shadow-sm hover:shadow-lg transition-all',
+                            w.status === 'defective'            ? 'border-red-200'
+                            : w.status === 'resolved_by_provider' ? 'border-emerald-200'
+                            : 'border-gray-200')}>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center',
+                                w.status === 'defective'             ? 'bg-red-100 text-red-600'
+                                : w.status === 'resolved_by_provider' ? 'bg-emerald-100 text-emerald-600'
+                                : 'bg-gray-100 text-gray-500')}>
+                                <ShieldCheck size={18} />
+                              </div>
+                              <div>
+                                <p className="font-black text-gray-800 text-sm leading-snug">{w.productName}</p>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase">{w.customerName}</p>
+                              </div>
+                            </div>
+                            <button onClick={() => handleDelete(w._id)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                            <div className="bg-gray-50 p-2 rounded-xl">
+                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Compra</p>
+                              <p className="font-black text-gray-800 text-[10px]">{new Date(w.date).toLocaleDateString()}</p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-xl">
+                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Vence</p>
+                              <p className={cn('font-black text-[10px]', daysLeft <= 0 ? 'text-red-500' : 'text-gray-800')}>
+                                {new Date(w.expiresAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded-xl">
+                              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Monto</p>
+                              <p className="font-black text-emerald-600 text-[10px]">Gs. {w.amount.toLocaleString()}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            {w.status === 'defective' && (
+                              <>
+                                <span className="text-[9px] font-black px-2.5 py-1 rounded-full bg-red-100 text-red-600 uppercase tracking-widest">🔴 Defectuoso</span>
+                                <button onClick={() => handleStatusChange(w._id, 'resolved_by_provider')}
+                                  className="text-[9px] font-black px-2.5 py-1 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 transition-all uppercase">
+                                  ✓ Repuesto
+                                </button>
+                                <button onClick={() => handleStatusChange(w._id, 'loss')}
+                                  className="text-[9px] font-black px-2.5 py-1 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all uppercase">
+                                  ✕ Pérdida
+                                </button>
+                              </>
+                            )}
+                            {w.status === 'resolved_by_provider' && (
+                              <span className="text-[9px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase">✓ Repuesto por fabricante</span>
+                            )}
+                            {w.status === 'loss' && (
+                              <span className="text-[9px] font-black px-2.5 py-1 rounded-full bg-red-100 text-red-600 uppercase">🔴 Pérdida</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Config modal */}
       {showConfig && (

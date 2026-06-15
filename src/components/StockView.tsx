@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Minus, Search, Edit2, Trash2, Package, MapPin, Tag, ArrowLeft, AlertTriangle, RefreshCw, ShieldCheck, Scan, Printer, BarChart2, TrendingUp, TrendingDown, Clock, DollarSign, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, Search, Edit2, Trash2, Package, MapPin, Tag, ArrowLeft, AlertTriangle, RefreshCw, ShieldCheck, Scan, Printer, BarChart2, TrendingUp, TrendingDown, Clock, DollarSign, ShoppingCart, History, User, StickyNote } from 'lucide-react';
 import { api } from '../api';
-import { Product, Category, Manufacturer } from '../types';
+import { Product, Category, Manufacturer, UserProfile, StockMovement } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput } from './ui/NumericInput';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -14,6 +14,7 @@ interface StockViewProps {
   manufacturers: Manufacturer[];
   onRefresh: () => void;
   exchangeRate?: number;
+  user?: UserProfile | null;
 }
 
 function printProductLabels(
@@ -95,7 +96,7 @@ const displayLocation = (loc: string) => {
   return parts.join(' · ');
 };
 
-export const StockView = ({ products, categories, manufacturers, onRefresh, exchangeRate = 6300 }: StockViewProps) => {
+export const StockView = ({ products, categories, manufacturers, onRefresh, exchangeRate = 6300, user }: StockViewProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -134,10 +135,17 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
 
   // ── Analítica de productos ───────────────────────────────────
   type StatsSort = 'units' | 'revenue' | 'margin' | 'idle';
-  const [mainTab,      setMainTab]      = useState<'stock' | 'analytics'>('stock');
+  const [mainTab,      setMainTab]      = useState<'stock' | 'analytics' | 'history'>('stock');
   const [productStats, setProductStats] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [statsSort,    setStatsSort]    = useState<StatsSort>('units');
+
+  // ── Historial de reposiciones ────────────────────────────────
+  const [stockMovements,    setStockMovements]    = useState<StockMovement[]>([]);
+  const [loadingMovements,  setLoadingMovements]  = useState(false);
+  const [historySearch,     setHistorySearch]     = useState('');
+  const [historyDateFrom,   setHistoryDateFrom]   = useState('');
+  const [historyDateTo,     setHistoryDateTo]     = useState('');
 
   React.useEffect(() => {
     fetchWarranties();
@@ -167,6 +175,16 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       .then((data: any[]) => { if (Array.isArray(data)) setProductStats(data); })
       .catch(() => {})
       .finally(() => setLoadingStats(false));
+  }, [mainTab]);
+
+  // Cargar historial de reposiciones
+  useEffect(() => {
+    if (mainTab !== 'history') return;
+    setLoadingMovements(true);
+    (api as any).getStockMovements()
+      .then((data: StockMovement[]) => { if (Array.isArray(data)) setStockMovements(data); })
+      .catch(() => {})
+      .finally(() => setLoadingMovements(false));
   }, [mainTab]);
 
   const getLowStockCount = (catId: string) => {
@@ -202,7 +220,11 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       || estante.toLowerCase().includes(q)
       || columna.toLowerCase().includes(q)
       || fila.toLowerCase().includes(q);
-    const matchesCategory = selectedCategoryId ? p.categoryId === selectedCategoryId : true;
+    const matchesCategory = selectedCategoryId
+      ? selectedCategoryId === 'UNASSIGNED'
+        ? !p.categoryId
+        : p.categoryId === selectedCategoryId
+      : true;
     const matchesMfr = selectedManufacturerId ? p.manufacturerId === selectedManufacturerId : true;
     const matchesEstante = selectedEstante ? estante === selectedEstante : true;
     const matchesColumna = selectedColumna ? columna === selectedColumna : true;
@@ -315,7 +337,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
   const handleRestock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (restockingProduct) {
-      await api.restockProduct(restockingProduct._id, { quantity: parseInt(restockData.quantity) || 0, costPrice: parseInt(restockData.costPrice) || 0 });
+      await api.restockProduct(restockingProduct._id, { quantity: parseInt(restockData.quantity) || 0, costPrice: parseInt(restockData.costPrice) || 0, userId: user?._id });
       setRestockingProduct(null);
       setRestockData({ quantity: '', costPrice: '' });
       onRefresh();
@@ -368,24 +390,32 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             <h2 className="text-4xl font-black text-gray-800 tracking-tighter">
               {mainTab === 'analytics'
                 ? 'Analítica'
-                : selectedCategoryId
-                  ? categories.find(c => c._id === selectedCategoryId)?.name
-                  : selectedManufacturerId
-                    ? manufacturers.find(m => m._id === selectedManufacturerId)?.name ?? 'Proveedor'
-                    : (selectedEstante || selectedColumna || selectedFila)
-                      ? [selectedEstante && `Est. ${selectedEstante}`, selectedColumna && `Col. ${selectedColumna}`, selectedFila && `Fila ${selectedFila}`].filter(Boolean).join(' · ')
-                      : 'Stock'}
+                : mainTab === 'history'
+                  ? 'Reposiciones'
+                  : selectedCategoryId
+                    ? selectedCategoryId === 'UNASSIGNED'
+                      ? 'Sin Asignar'
+                      : categories.find(c => c._id === selectedCategoryId)?.name
+                    : selectedManufacturerId
+                      ? manufacturers.find(m => m._id === selectedManufacturerId)?.name ?? 'Proveedor'
+                      : (selectedEstante || selectedColumna || selectedFila)
+                        ? [selectedEstante && `Est. ${selectedEstante}`, selectedColumna && `Col. ${selectedColumna}`, selectedFila && `Fila ${selectedFila}`].filter(Boolean).join(' · ')
+                        : 'Stock'}
             </h2>
             <p className="text-gray-400 font-bold tracking-widest uppercase text-[10px] mt-1">
               {mainTab === 'analytics'
                 ? 'Rendimiento por Producto'
-                : selectedCategoryId
-                  ? 'Productos en esta categoría'
-                  : selectedManufacturerId
-                    ? 'Productos de este proveedor'
-                    : (selectedEstante || selectedColumna || selectedFila)
-                      ? 'Productos en esta ubicación'
-                      : 'Inventario por Categorías'}
+                : mainTab === 'history'
+                  ? 'Historial de ingresos al stock'
+                  : selectedCategoryId
+                    ? selectedCategoryId === 'UNASSIGNED'
+                      ? 'Productos sin categoría asignada'
+                      : 'Productos en esta categoría'
+                    : selectedManufacturerId
+                      ? 'Productos de este proveedor'
+                      : (selectedEstante || selectedColumna || selectedFila)
+                        ? 'Productos en esta ubicación'
+                        : 'Inventario por Categorías'}
             </p>
           </div>
         </div>
@@ -432,11 +462,25 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               Actualizar
             </button>
           )}
+          {mainTab === 'history' && (
+            <button
+              onClick={() => {
+                setLoadingMovements(true);
+                (api as any).getStockMovements()
+                  .then((data: StockMovement[]) => { if (Array.isArray(data)) setStockMovements(data); })
+                  .catch(() => {})
+                  .finally(() => setLoadingMovements(false));
+              }}
+              className="bg-white border border-gray-200 text-gray-600 font-black px-6 py-3 rounded-2xl hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2">
+              <RefreshCw size={18} className={loadingMovements ? 'animate-spin' : ''} />
+              Actualizar
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Pestañas Stock / Analítica ── */}
-      <div className="flex gap-2">
+      {/* ── Pestañas Stock / Analítica / Reposiciones ── */}
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setMainTab('stock')}
           className={cn("px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2",
@@ -452,6 +496,14 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               ? "bg-violet-600 text-white shadow-lg shadow-violet-200"
               : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50")}>
           <BarChart2 size={16} /> Analítica
+        </button>
+        <button
+          onClick={() => setMainTab('history')}
+          className={cn("px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2",
+            mainTab === 'history'
+              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200"
+              : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50")}>
+          <History size={16} /> Reposiciones
         </button>
       </div>
 
@@ -655,6 +707,166 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
         </div>
       )}
 
+      {/* ════════════════════════════════════════════════════════
+          PESTAÑA HISTORIAL DE REPOSICIONES
+          ════════════════════════════════════════════════════════ */}
+      {mainTab === 'history' && (() => {
+        const filtered = stockMovements.filter(m => {
+          const matchSearch = !historySearch ||
+            (m.productModel ?? '').toLowerCase().includes(historySearch.toLowerCase()) ||
+            (m.userName ?? '').toLowerCase().includes(historySearch.toLowerCase()) ||
+            (m.categoryName ?? '').toLowerCase().includes(historySearch.toLowerCase()) ||
+            (m.note ?? '').toLowerCase().includes(historySearch.toLowerCase());
+          const d = new Date(m.createdAt);
+          const matchFrom = !historyDateFrom || d >= new Date(historyDateFrom);
+          const matchTo   = !historyDateTo   || d <= new Date(historyDateTo + 'T23:59:59');
+          return matchSearch && matchFrom && matchTo;
+        });
+
+        const totalUnits    = filtered.reduce((s, m) => s + m.quantity, 0);
+        const totalInvested = filtered.reduce((s, m) => s + m.quantity * m.costPrice, 0);
+        const totalMovs     = filtered.length;
+
+        return (
+          <div className="space-y-6">
+            {/* Filtros */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Buscar por producto, categoría, usuario o nota..."
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl outline-none focus:border-emerald-400 font-medium text-sm"
+                />
+              </div>
+              <input
+                type="date"
+                value={historyDateFrom}
+                onChange={e => setHistoryDateFrom(e.target.value)}
+                className="px-4 py-3 bg-white border border-gray-200 rounded-2xl outline-none focus:border-emerald-400 font-medium text-sm text-gray-600"
+              />
+              <input
+                type="date"
+                value={historyDateTo}
+                onChange={e => setHistoryDateTo(e.target.value)}
+                className="px-4 py-3 bg-white border border-gray-200 rounded-2xl outline-none focus:border-emerald-400 font-medium text-sm text-gray-600"
+              />
+              {(historySearch || historyDateFrom || historyDateTo) && (
+                <button
+                  onClick={() => { setHistorySearch(''); setHistoryDateFrom(''); setHistoryDateTo(''); }}
+                  className="px-4 py-3 bg-gray-100 rounded-2xl text-gray-500 font-bold text-sm hover:bg-gray-200 transition-colors">
+                  Limpiar
+                </button>
+              )}
+            </div>
+
+            {/* Estadísticas resumen */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 text-center">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Reposiciones</p>
+                <p className="text-3xl font-black text-gray-800">{totalMovs}</p>
+              </div>
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 text-center">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Unidades ingresadas</p>
+                <p className="text-3xl font-black text-emerald-600">{totalUnits.toLocaleString()}</p>
+              </div>
+              <div className="bg-white rounded-3xl p-5 border border-gray-100 text-center">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total invertido</p>
+                <p className="text-2xl font-black text-indigo-600">Gs. {totalInvested.toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Lista de movimientos */}
+            {loadingMovements ? (
+              <div className="flex items-center justify-center py-20">
+                <RefreshCw className="animate-spin text-emerald-500" size={32} />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">
+                <History size={48} className="mx-auto mb-3 opacity-30" />
+                <p className="font-black text-lg">Sin reposiciones registradas</p>
+                <p className="text-sm mt-1">Las próximas aparecerán acá automáticamente</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map(m => {
+                  const d    = new Date(m.createdAt);
+                  const date = d.toLocaleDateString('es-PY', { day: '2-digit', month: 'short', year: '2-digit' });
+                  const time = d.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });
+                  const total = m.quantity * m.costPrice;
+                  return (
+                    <motion.div
+                      key={m._id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-3xl border border-gray-100 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                      {/* Fecha */}
+                      <div className="w-20 shrink-0 text-center bg-emerald-50 rounded-2xl py-3">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{date.split(' ')[1]}</p>
+                        <p className="text-xl font-black text-gray-800 leading-none">{date.split(' ')[0]}</p>
+                        <p className="text-[10px] text-gray-400 font-bold">{date.split(' ')[2]}</p>
+                        <p className="text-[10px] text-gray-400 font-mono mt-1">{time}</p>
+                      </div>
+
+                      {/* Producto */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-gray-800 text-base truncate">{m.productModel || '—'}</p>
+                        {m.categoryName && (
+                          <span className="inline-block text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest mt-1">
+                            {m.categoryName}
+                          </span>
+                        )}
+                        {m.note && (
+                          <p className="text-xs text-gray-400 font-medium mt-1 flex items-center gap-1">
+                            <StickyNote size={11} />
+                            {m.note}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Quién */}
+                      {m.userName ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-500 shrink-0">
+                          <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center">
+                            <User size={13} />
+                          </div>
+                          <span className="font-bold">{m.userName}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm text-gray-300 shrink-0">
+                          <div className="w-7 h-7 bg-gray-50 rounded-full flex items-center justify-center">
+                            <User size={13} />
+                          </div>
+                          <span className="font-bold text-xs">Historial</span>
+                        </div>
+                      )}
+
+                      {/* Métricas */}
+                      <div className="flex gap-4 shrink-0">
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidades</p>
+                          <p className="text-xl font-black text-emerald-600">+{m.quantity}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Costo/u</p>
+                          <p className="text-sm font-black text-gray-700">Gs. {m.costPrice.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</p>
+                          <p className="text-sm font-black text-indigo-600">Gs. {total.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {mainTab === 'stock' && (<>
 
       <div className="relative group">
@@ -820,9 +1032,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               const lowStock = getLowStockCount(c._id);
               const totalItems = products.filter(p => p.categoryId === c._id).length;
               return (
-                <motion.div 
+                <motion.div
                   whileHover={{ y: -5 }}
-                  key={c._id} 
+                  key={c._id}
                   onClick={() => setSelectedCategoryId(c._id)}
                   className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden"
                 >
@@ -835,7 +1047,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                     </span>
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black text-gray-800 mb-3 sm:mb-4 tracking-tight">{c.name}</h3>
-                  
+
                   {lowStock > 0 && (
                     <div className="flex items-center gap-2 text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">
                       <AlertTriangle size={16} />
@@ -847,6 +1059,33 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 </motion.div>
               );
             })}
+
+            {/* ── Tarjeta virtual "Sin Asignar" ── */}
+            {(() => {
+              const unassigned = products.filter(p => !p.categoryId);
+              if (unassigned.length === 0) return null;
+              return (
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  key="UNASSIGNED"
+                  onClick={() => setSelectedCategoryId('UNASSIGNED')}
+                  className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border-2 border-dashed border-amber-200 hover:shadow-2xl hover:border-amber-400 transition-all cursor-pointer group relative overflow-hidden"
+                >
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all">
+                      <AlertTriangle size={32} />
+                    </div>
+                    <span className="text-[10px] font-black px-3 py-1 bg-amber-50 text-amber-500 rounded-full uppercase tracking-widest">
+                      {unassigned.length} Modelos
+                    </span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-amber-600 mb-3 sm:mb-4 tracking-tight">Sin Asignar</h3>
+                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest">
+                    Productos sin categoría
+                  </p>
+                </motion.div>
+              );
+            })()}
           </motion.div>
         ) : (
           <motion.div 
@@ -899,7 +1138,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       {/* Categoría — solo visible en búsqueda global */}
                       {!selectedCategoryId && searchTerm && (
                         <span className="text-[10px] font-black px-3 py-1 bg-violet-50 text-violet-600 rounded-full uppercase tracking-widest flex items-center gap-1">
-                          <Tag size={10} /> {categories.find(c => c._id === p.categoryId)?.name ?? '—'}
+                          <Tag size={10} /> {categories.find(c => c._id === p.categoryId)?.name ?? 'Sin Asignar'}
                         </span>
                       )}
                       {isLowStock && (
@@ -986,7 +1225,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Modelo</label>
-                <input required value={newProduct.model} onChange={e => setNewProduct({...newProduct, model: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <input required value={newProduct.model} onChange={e => setNewProduct({...newProduct, model: e.target.value.toUpperCase()})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Categoría</label>
@@ -1276,7 +1515,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Modelo</label>
-                <input required value={editingProduct.model} onChange={e => setEditingProduct({...editingProduct, model: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <input required value={editingProduct.model} onChange={e => setEditingProduct({...editingProduct, model: e.target.value.toUpperCase()})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Categoría</label>

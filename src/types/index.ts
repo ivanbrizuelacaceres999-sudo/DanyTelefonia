@@ -157,7 +157,7 @@ export interface Warranty {
   date: string;
   expiresAt: string;
   warrantyDays: number;
-  reason: string;
+  reason?: string;
   status: 'active' | 'expired' | 'defective' | 'resolved_by_provider' | 'loss';
   amount: number;
 }
@@ -201,6 +201,19 @@ export interface ReventaSupplier {
   name: string;
   contact?: string;
   createdAt: string;
+}
+
+export interface StockMovement {
+  _id: string;
+  productId: string;
+  userId?: string;
+  quantity: number;
+  costPrice: number;
+  note?: string;
+  createdAt: string;
+  productModel?: string;
+  categoryName?: string;
+  userName?: string;
 }
 
 export interface ReventaItem {
