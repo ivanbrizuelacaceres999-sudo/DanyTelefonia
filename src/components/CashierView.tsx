@@ -67,7 +67,7 @@ const n = (v: any): number => {
   return isNaN(x) ? 0 : x;
 };
 
-type PriceType = 'normal' | 'wholesale' | 'cheap';
+type PriceType = 'normal' | 'wholesale' | 'cheap' | 'especial';
 
 interface CartItem {
   id: string;
@@ -496,18 +496,27 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
       return updated;
     });
 
+  const hasPendingSpecial = cart.some(i => i.priceType === 'especial' && i.price === 0);
+
   const checkout = async () => {
     if (cart.length === 0) { setErrorMsg('El carrito está vacío.'); return; }
-    if (totalPaid < total) { setErrorMsg(`Falta cubrir Gs. ${resta.toLocaleString()} para completar el pago.`); return; }
+    if (!hasPendingSpecial && totalPaid < total) { setErrorMsg(`Falta cubrir Gs. ${resta.toLocaleString()} para completar el pago.`); return; }
 
     // Capturar productos rápidos de este carrito ANTES de vaciarlo
     const quickSold = cart.filter(i => quickCreatedIds.includes(i.id));
 
     setIsProcessing(true); setErrorMsg(''); setSuccessMsg('');
     try {
-      const paymentsData = payments
-        .filter(p => parseInt(p.amount) > 0)
-        .map(p => ({ method: p.method, amount: parseInt(p.amount) }));
+      let paymentsData: { method: string; amount: number }[];
+      if (hasPendingSpecial && total === 0) {
+        paymentsData = wholesalerId
+          ? [{ method: 'credit', amount: 0 }]
+          : [{ method: 'cash', amount: 0 }];
+      } else {
+        paymentsData = payments
+          .filter(p => parseInt(p.amount) > 0)
+          .map(p => ({ method: p.method, amount: parseInt(p.amount) }));
+      }
 
       const paymentMethod = paymentsData.length === 1 ? paymentsData[0].method : 'mixed';
 
@@ -524,6 +533,25 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
           'Consumidor Final',
         sessionId: session?._id,
       });
+
+      // ── Registrar ítems de precio especial ──
+      const specialItemsInCart = cart.filter(i => i.priceType === 'especial');
+      if (specialItemsInCart.length > 0) {
+        const wsName = wholesalerId ? wholesalers.find(w => w._id === wholesalerId)?.name : undefined;
+        for (const si of specialItemsInCart) {
+          try {
+            await (api as any).createSpecialPriceItem({
+              saleId: sale._id,
+              productId: si.type === 'product' ? si.id : undefined,
+              productName: si.name,
+              quantity: si.quantity,
+              wholesalerId: wholesalerId || undefined,
+              wholesalerName: wsName,
+              saleDate: sale.date,
+            });
+          } catch { /* non-fatal */ }
+        }
+      }
 
       setCart([]); setDiscount(''); setWholesalerId(''); setCustomerName('');
       setPayments([{ method: 'cash', amount: '' }]);
@@ -670,6 +698,23 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
     const quantity = Math.max(1, parseInt(addModal.qty) || 1);
     const stock = n(p.quantity);
     const hasNoPrice = n(p.salePrice) === 0 && n(p.priceWholesale) === 0 && n(p.priceCheap) === 0;
+
+    // Precio Especial: agregar con precio a definir (no guarda en DB)
+    if (addModal.priceType === 'especial') {
+      const price = parseInt((addModal.pendingPrice || '').replace(/\D/g, '')) || 0;
+      if (stock < quantity) { setErrorMsg(`Stock insuficiente: solo ${stock} unidades.`); return; }
+      setCart(prev => {
+        const ex = prev.find(i => i.id === p._id && i.type === 'product');
+        if (ex) {
+          if (stock < ex.quantity + quantity) { setErrorMsg('Stock insuficiente'); return prev; }
+          return prev.map(i => i.id === p._id ? { ...i, quantity: i.quantity + quantity } : i);
+        }
+        return [...prev, { id: p._id, type: 'product', name: p.model, price, cost: n(p.costPrice), quantity, priceType: 'especial' as PriceType }];
+      });
+      setAddModal(null); setErrorMsg('');
+      if (window.innerWidth < 768) setMobileView('ticket');
+      return;
+    }
 
     // Si no tiene precio, guardar el precio ingresado en la DB
     if (hasNoPrice) {
@@ -986,8 +1031,10 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                   <p className="font-black text-gray-900 text-[15px] flex-1 truncate leading-snug">{item.name}</p>
                   {item.priceType && item.priceType !== 'normal' && (
                     <span className={cn('text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0',
-                      item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600')}>
-                      {item.priceType === 'wholesale' ? 'MAYORISTA' : 'ECONOMICO'}
+                      item.priceType === 'wholesale' ? 'bg-purple-100 text-purple-600'
+                      : item.priceType === 'especial' ? 'bg-pink-100 text-pink-600'
+                      : 'bg-orange-100 text-orange-600')}>
+                      {item.priceType === 'wholesale' ? 'MAYORISTA' : item.priceType === 'especial' ? 'ESPECIAL' : 'ECONOMICO'}
                     </span>
                   )}
                   <div className="flex-1 mx-2 border-b border-dashed border-gray-200 min-w-[16px]" />
@@ -1120,7 +1167,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-2xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
           </div>
           <button onClick={checkout}
-            disabled={cart.length === 0 || isProcessing || totalPaid < total || total === 0}
+            disabled={cart.length === 0 || isProcessing || (!hasPendingSpecial && (totalPaid < total || total === 0))}
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:shadow-none cursor-pointer text-sm">
             {isProcessing
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
@@ -1229,7 +1276,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-3xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
           </div>
           <button onClick={checkout}
-            disabled={cart.length === 0 || isProcessing || totalPaid < total || total === 0}
+            disabled={cart.length === 0 || isProcessing || (!hasPendingSpecial && (totalPaid < total || total === 0))}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-7 py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-[0.98] transition-all flex items-center gap-2.5 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer text-sm whitespace-nowrap">
             {isProcessing
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
@@ -1367,7 +1414,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                 const p = addModal.product;
                 const hasNoPrice = n(p.salePrice) === 0 && n(p.priceWholesale) === 0 && n(p.priceCheap) === 0;
                 const pendingAmt = parseInt((addModal.pendingPrice || '').replace(/\D/g, '')) || 0;
-                const cartTotal = hasNoPrice
+                const cartTotal = (addModal.priceType === 'especial' || hasNoPrice)
                   ? pendingAmt * parseInt(addModal.qty || '1')
                   : n(addModal.priceType === 'wholesale' ? p.priceWholesale : addModal.priceType === 'cheap' ? p.priceCheap : p.salePrice) * parseInt(addModal.qty || '1');
                 return (
@@ -1397,17 +1444,20 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                           placeholder="0"
                           className="w-full p-4 bg-amber-50 border-2 border-amber-200 focus:border-amber-500 focus:bg-white rounded-2xl outline-none font-black text-2xl text-center transition-all"
                         />
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           {([
                             { key: 'normal'    as PriceType, label: 'Normal',    emoji: '🏷️' },
                             { key: 'wholesale' as PriceType, label: 'Mayorista', emoji: '🏪' },
                             { key: 'cheap'     as PriceType, label: 'Tacaño',    emoji: '💸' },
+                            { key: 'especial'  as PriceType, label: 'Especial',  emoji: '✨' },
                           ]).map(opt => (
                             <button key={opt.key}
                               onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, priceType: opt.key } : prev)}
                               className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center transition-all cursor-pointer text-sm',
                                 addModal.priceType === opt.key
-                                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-200'
+                                  ? opt.key === 'especial'
+                                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-200'
+                                    : 'bg-amber-500 text-white shadow-lg shadow-amber-200'
                                   : 'bg-gray-50 text-gray-500 hover:bg-amber-50 hover:text-amber-700')}>
                               <span className="text-base">{opt.emoji}</span>
                               <span className="text-[9px] uppercase tracking-widest mt-0.5">{opt.label}</span>
@@ -1415,21 +1465,24 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                           ))}
                         </div>
                         <p className="text-[9px] font-bold text-gray-400 text-center">
-                          Se guarda como precio <span className="font-black text-gray-600">{addModal.priceType === 'wholesale' ? 'Mayorista' : addModal.priceType === 'cheap' ? 'Tacaño' : 'Normal'}</span> del producto
+                          {addModal.priceType === 'especial'
+                            ? 'Precio a definir luego — no se guarda en el producto'
+                            : <>Se guarda como precio <span className="font-black text-gray-600">{addModal.priceType === 'wholesale' ? 'Mayorista' : addModal.priceType === 'cheap' ? 'Tacaño' : 'Normal'}</span> del producto</>
+                          }
                         </p>
                       </div>
                     ) : (
                       /* ── Producto con precio: selector normal ── */
                       <div className="space-y-2">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Precio</p>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           {([
                             { key: 'normal'    as PriceType, label: 'Normal',    price: n(p.salePrice) },
                             { key: 'wholesale' as PriceType, label: 'Mayorista', price: n(p.priceWholesale) },
                             { key: 'cheap'     as PriceType, label: 'Economico', price: n(p.priceCheap) },
                           ].filter(o => o.price > 0)).map(opt => (
                             <button key={opt.key}
-                              onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, priceType: opt.key } : prev)}
+                              onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, priceType: opt.key, pendingPrice: '' } : prev)}
                               className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center transition-all cursor-pointer',
                                 addModal.priceType === opt.key
                                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
@@ -1438,7 +1491,27 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                               <span className="text-sm mt-1">Gs. {opt.price.toLocaleString()}</span>
                             </button>
                           ))}
+                          <button
+                            onClick={() => setAddModal(prev => prev?.type === 'product' ? { ...prev, priceType: 'especial', pendingPrice: '' } : prev)}
+                            className={cn('flex flex-col items-center py-3 px-2 rounded-2xl font-black text-center transition-all cursor-pointer',
+                              addModal.priceType === 'especial'
+                                ? 'bg-pink-500 text-white shadow-lg shadow-pink-200'
+                                : 'bg-gray-50 text-gray-600 hover:bg-pink-50 hover:text-pink-700')}>
+                            <span className="text-base">✨</span>
+                            <span className="text-[9px] uppercase tracking-widest mt-0.5">Especial</span>
+                          </button>
                         </div>
+                        {addModal.priceType === 'especial' && (
+                          <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Precio especial (opcional)</p>
+                            <NumericInput
+                              value={addModal.pendingPrice}
+                              onChange={raw => setAddModal(prev => prev?.type === 'product' ? { ...prev, pendingPrice: raw } : prev)}
+                              placeholder="0 = definir después"
+                              className="w-full p-3 bg-pink-50 border-2 border-pink-200 focus:border-pink-500 focus:bg-white rounded-2xl outline-none font-black text-lg text-center transition-all"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1465,12 +1538,14 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                     <div className="flex gap-3">
                       <button onClick={() => setAddModal(null)} className="flex-1 py-3 rounded-2xl border-2 border-gray-100 font-black text-gray-500 hover:bg-gray-50 cursor-pointer">Cancelar</button>
                       <button onClick={addFromModal}
-                        disabled={hasNoPrice && pendingAmt === 0}
+                        disabled={hasNoPrice && addModal.priceType !== 'especial' && pendingAmt === 0}
                         className={cn("flex-1 py-3 rounded-2xl text-white font-black shadow-xl cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all",
-                          hasNoPrice
-                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200'
-                            : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200')}>
-                        <Plus size={16} /> {hasNoPrice ? 'Guardar precio y agregar' : 'Agregar al ticket'}
+                          addModal.priceType === 'especial'
+                            ? 'bg-pink-500 hover:bg-pink-600 shadow-pink-200'
+                            : hasNoPrice
+                              ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200'
+                              : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200')}>
+                        <Plus size={16} /> {addModal.priceType === 'especial' ? 'Agregar (precio a definir)' : hasNoPrice ? 'Guardar precio y agregar' : 'Agregar al ticket'}
                       </button>
                     </div>
                   </div>

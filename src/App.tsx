@@ -5,7 +5,7 @@ import {
   requestPermission, initKnownIds, getSettings,
   checkWarranty, checkSales10, checkOldRepairs, checkWithdrawal,
 } from './utils/notifications';
-import { UserProfile, Category, Manufacturer, Wholesaler, FixedCost, Product, Repair, Sale, ReventaItem, ReventaSupplier } from './types';
+import { UserProfile, Category, Manufacturer, Wholesaler, FixedCost, Product, Repair, Sale, ReventaItem, ReventaSupplier, SpecialPriceItem } from './types';
 import { Sidebar } from './components/Sidebar';
 import { LoginScreen } from './components/LoginScreen';
 import { DashboardView } from './components/DashboardView';
@@ -20,6 +20,7 @@ import { UsersView } from './components/UsersView';
 import { GastosView } from './components/GastosView';
 import { ConfiguracionesView } from './components/ConfiguracionesView';
 import { ReventasView } from './components/ReventasView';
+import { PricesView } from './components/PricesView';
 import { motion, AnimatePresence } from 'motion/react';
 import { socket, connectSocket, disconnectSocket, UpdateEvent } from './socket';
 import { useBarcodeScanner, ScanResult } from './hooks/useBarcodeScanner';
@@ -60,9 +61,10 @@ function App() {
   const [wholesalers,      setWholesalers]      = useState<Wholesaler[]>([]);
   const [fixedCosts,       setFixedCosts]       = useState<FixedCost[]>([]);
   const [users,            setUsers]            = useState<UserProfile[]>([]);
-  const [reventaItems,     setReventaItems]     = useState<ReventaItem[]>([]);
-  const [reventaSuppliers, setReventaSuppliers] = useState<ReventaSupplier[]>([]);
-  const [exchangeRate,     setExchangeRate]     = useState<number>(6300);
+  const [reventaItems,       setReventaItems]       = useState<ReventaItem[]>([]);
+  const [reventaSuppliers,   setReventaSuppliers]   = useState<ReventaSupplier[]>([]);
+  const [exchangeRate,       setExchangeRate]       = useState<number>(6300);
+  const [specialPriceItems,  setSpecialPriceItems]  = useState<SpecialPriceItem[]>([]);
 
   // ── Estados de los modales del escáner ───────────────────────
   const [restockModal,  setRestockModal]  = useState<RestockModal | null>(null);
@@ -101,13 +103,14 @@ function App() {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [p, r, s, c, w, fc, u, ri, rs, mfr, expCfg] = await Promise.all([
+      const [p, r, s, c, w, fc, u, ri, rs, mfr, expCfg, spi] = await Promise.all([
         api.getProducts(), api.getRepairs(), api.getSales(),
         api.getCategories(), api.getWholesalers(),
         api.getFixedCosts(), api.getUsers(),
         (api as any).getReventaItems(), (api as any).getReventaSuppliers(),
         (api as any).getManufacturers(),
         (api as any).getExpenseConfig(),
+        (api as any).getSpecialPriceItems(),
       ]);
       const repairs_     = Array.isArray(r)  ? r  : [];
       const sales_       = Array.isArray(s)  ? s  : [];
@@ -123,6 +126,7 @@ function App() {
       setReventaItems(Array.isArray(ri)  ? ri  : []);
       setReventaSuppliers(Array.isArray(rs) ? rs : []);
       setManufacturers(Array.isArray(mfr) ? mfr : []);
+      setSpecialPriceItems(Array.isArray(spi) ? spi : []);
       if (expCfg?.exchangeRate) setExchangeRate(expCfg.exchangeRate);
 
       // ── Notificaciones ─────────────────────────────────────────
@@ -176,6 +180,7 @@ function App() {
           case 'reventa-items':     (api as any).getReventaItems().then((ri: any) => setReventaItems(Array.isArray(ri) ? ri : [])); break;
           case 'reventa-suppliers': (api as any).getReventaSuppliers().then((rs: any) => setReventaSuppliers(Array.isArray(rs) ? rs : [])); break;
           case 'manufacturers':     (api as any).getManufacturers().then((m: any) => setManufacturers(Array.isArray(m) ? m : [])); break;
+          case 'special-price-items': (api as any).getSpecialPriceItems().then((spi: any) => setSpecialPriceItems(Array.isArray(spi) ? spi : [])); break;
           case 'stock-movements':   break; // StockView los recarga sola cuando está activa
           default:            fetchData();
         }
@@ -303,6 +308,7 @@ function App() {
       case 'gastos':        return <GastosView fixedCosts={fixedCosts} users={users} onRefresh={fetchData} />;
       case 'warranty':      return <WarrantyView sales={sales} products={products} manufacturers={manufacturers} onRefresh={fetchData} />;
       case 'users':         return <UsersView users={users} onRefresh={fetchData} />;
+      case 'precios':         return <PricesView specialPriceItems={specialPriceItems} onRefresh={fetchData} />;
       case 'configuraciones': return <ConfiguracionesView />;
       default:              return <DashboardView products={products} repairs={repairs} sales={sales} categories={categories} onNavigate={setActiveTab} />;
     }

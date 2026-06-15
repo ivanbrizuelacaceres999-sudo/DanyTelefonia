@@ -228,3 +228,17 @@ export interface ReventaItem {
   supplierId?: string;
   createdAt: string;
 }
+
+export interface SpecialPriceItem {
+  _id: string;
+  saleId: string;
+  productId?: string;
+  productName: string;
+  quantity: number;
+  specialPrice?: number;
+  status: 'pending' | 'assigned';
+  wholesalerId?: string;
+  wholesalerName?: string;
+  saleDate: string;
+  createdAt: string;
+}

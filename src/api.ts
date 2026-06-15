@@ -1075,6 +1075,66 @@ export const api = {
     };
   },
 
+  // ─── Precios Especiales ──────────────────────────────────────
+  createSpecialPriceItem: async (body: {
+    saleId: string; productId?: string; productName: string;
+    quantity: number; wholesalerId?: string; wholesalerName?: string; saleDate: string;
+  }) => {
+    const { data } = await supabase.from('special_price_items').insert({
+      sale_id: body.saleId,
+      product_id: body.productId || null,
+      product_name: body.productName,
+      quantity: body.quantity,
+      wholesaler_id: body.wholesalerId || null,
+      wholesaler_name: body.wholesalerName || null,
+      sale_date: body.saleDate,
+      status: 'pending',
+    }).select().single();
+    await broadcast('special-price-items');
+    return toClient(data);
+  },
+
+  getSpecialPriceItems: async () => {
+    const { data } = await supabase.from('special_price_items').select('*').order('created_at', { ascending: false });
+    return toClient(data ?? []);
+  },
+
+  assignSpecialPrice: async (id: string, specialPrice: number) => {
+    const { data: item } = await supabase.from('special_price_items').select('*').eq('id', id).single();
+    if (!item) throw new Error('Item no encontrado');
+
+    await supabase.from('special_price_items').update({
+      special_price: specialPrice,
+      status: 'assigned',
+    }).eq('id', id);
+
+    // Actualizar el ítem en la venta y el total
+    const { data: sale } = await supabase.from('sales').select('*').eq('id', item.sale_id).single();
+    if (sale) {
+      const items = (sale.items ?? []).map((si: any) =>
+        si.id === item.product_id ? { ...si, price: specialPrice } : si
+      );
+      const newTotal = items.reduce((s: number, si: any) => s + (si.price ?? 0) * (si.quantity ?? 1), 0);
+      await supabase.from('sales').update({ items, total: newTotal }).eq('id', item.sale_id);
+      await broadcast('sales');
+
+      // Actualizar deuda del mayorista si la venta fue a crédito
+      if (item.wholesaler_id) {
+        const hasCredit = (sale.payments ?? []).some((p: any) => p.method === 'credit') || sale.payment_method === 'credit';
+        if (hasCredit) {
+          const { data: ws } = await supabase.from('wholesalers').select('debt').eq('id', item.wholesaler_id).single();
+          if (ws) {
+            await supabase.from('wholesalers').update({ debt: (ws.debt ?? 0) + specialPrice * item.quantity }).eq('id', item.wholesaler_id);
+            await broadcast('wholesalers');
+          }
+        }
+      }
+    }
+
+    await broadcast('special-price-items');
+    return { ok: true };
+  },
+
   getProductStats: async () => {
     const { data: sales } = await supabase.from('sales').select('*').order('date', { ascending: false });
     const map: Record<string, any> = {};

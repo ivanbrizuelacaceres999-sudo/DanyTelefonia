@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   LayoutDashboard, Package, Wrench, ShoppingCart,
   Users, History, ShieldCheck, LogOut, ChevronLeft, ChevronRight,
-  TrendingUp, Wallet, MoreHorizontal, X, Settings, ShoppingBag,
+  TrendingUp, Wallet, MoreHorizontal, X, Settings, ShoppingBag, Tag,
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { cn } from '../lib/utils';
@@ -45,6 +45,7 @@ export const Sidebar = ({ user, activeTab, setActiveTab, collapsed, setCollapsed
     { id: 'cashier',       label: 'Caja',            icon: ShoppingCart,    roles: ['admin', 'cashier'] },
     { id: 'reventas',      label: 'Reventas',        icon: ShoppingBag,     roles: ['admin', 'cashier'] },
     { id: 'wholesale',     label: 'Mayoristas',      icon: TrendingUp,      roles: ['admin', 'cashier'] },
+    { id: 'precios',       label: 'Precios',         icon: Tag,             roles: ['admin', 'cashier'] },
     { id: 'history',       label: 'Historial',       icon: History,         roles: ['admin', 'cashier'] },
     { id: 'stats',         label: 'Estadísticas',    icon: TrendingUp,      roles: ['admin'] },
     { id: 'gastos',        label: 'Gastos',          icon: Wallet,          roles: ['admin'] },
