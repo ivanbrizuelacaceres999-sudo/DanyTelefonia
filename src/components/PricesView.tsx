@@ -82,6 +82,15 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
 
   const displayItems = tab === 'pending' ? pending : all;
 
+  // Agrupar por mayorista
+  const grouped = displayItems.reduce((acc, item) => {
+    const key = item.wholesalerId || '__sin__';
+    if (!acc[key]) acc[key] = { name: item.wholesalerName || 'Sin mayorista', items: [] };
+    acc[key].items.push(item);
+    return acc;
+  }, {} as Record<string, { name: string; items: SpecialPriceItem[] }>);
+  const groups = Object.entries(grouped);
+
   return (
     <div className="space-y-6 pb-24 md:pb-0">
 
@@ -130,81 +139,102 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
         </div>
       )}
 
-      {/* Lista */}
-      <div className="space-y-3">
-        {displayItems.length === 0 ? (
+      {/* Grupos por mayorista */}
+      <div className="space-y-5">
+        {groups.length === 0 ? (
           <div className="text-center py-20 text-gray-300">
             {tab === 'pending' ? <CheckCircle size={40} className="mx-auto mb-3" /> : <Tag size={40} className="mx-auto mb-3" />}
             <p className="font-black text-sm uppercase tracking-widest">
               {tab === 'pending' ? 'Sin pendientes' : 'Sin ventas especiales'}
             </p>
           </div>
-        ) : displayItems.map(item => {
-          const prod = products.find(p => p._id === item.productId);
-          const isPending = item.status === 'pending';
+        ) : groups.map(([key, group]) => {
+          const pendingCount = group.items.filter(i => i.status === 'pending').length;
           return (
-            <div key={item._id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="flex items-start gap-4">
-                <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
-                  isPending ? 'bg-pink-100 text-pink-600' : 'bg-emerald-100 text-emerald-600')}>
-                  <Package size={20} />
+            <div key={key} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Cabecera del grupo */}
+              <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 border-b border-gray-100">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-sm">
+                  {group.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-black text-gray-800 text-base leading-snug">{item.productName}</p>
-                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    <span className="text-[10px] font-bold text-gray-400">
-                      Cantidad: <span className="text-gray-700 font-black">{item.quantity}</span>
+                <p className="font-black text-gray-700 text-sm">{group.name}</p>
+                <div className="ml-auto flex items-center gap-2">
+                  {pendingCount > 0 && (
+                    <span className="text-[10px] font-black text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">
+                      {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
                     </span>
-                    {item.wholesalerName && (
-                      <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
-                        {item.wholesalerName}
-                      </span>
-                    )}
-                    <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
-                      <Clock size={9} />
-                      {new Date(item.saleDate).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', year: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {isPending ? (
-                    <span className="text-[10px] font-black text-pink-500 bg-pink-50 px-2 py-1 rounded-lg">PENDIENTE</span>
-                  ) : (
-                    <span className="font-black text-emerald-600 text-lg">Gs. {n(item.specialPrice).toLocaleString()}</span>
                   )}
-                  {prod && (
-                    <button
-                      onClick={() => openEdit(item)}
-                      className="p-2 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all"
-                      title="Editar producto">
-                      <Edit2 size={15} />
-                    </button>
-                  )}
+                  <span className="text-[10px] font-bold text-gray-400">
+                    {group.items.length} producto{group.items.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
 
-              {/* Input de asignación solo para pendientes */}
-              {isPending && (
-                <div className="mt-4 flex gap-2 items-center">
-                  <div className="flex-1">
-                    <NumericInput
-                      value={prices[item._id] ?? ''}
-                      onChange={raw => setPrices(prev => ({ ...prev, [item._id]: raw }))}
-                      placeholder="Precio en Gs."
-                      className="w-full p-3 bg-gray-50 border-2 border-gray-200 focus:border-pink-400 focus:bg-white rounded-xl outline-none font-black text-lg text-center transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={() => handleAssign(item)}
-                    disabled={saving === item._id || !(parseInt((prices[item._id] ?? '').replace(/\D/g, '')) > 0)}
-                    className="px-5 py-3 bg-pink-500 hover:bg-pink-600 text-white font-black rounded-xl shadow-lg shadow-pink-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap">
-                    {saving === item._id
-                      ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
-                      : <><CheckCircle size={15} /> Asignar</>
-                    }
-                  </button>
-                </div>
-              )}
+              {/* Productos del grupo */}
+              <div className="divide-y divide-gray-50">
+                {group.items.map(item => {
+                  const prod = products.find(p => p._id === item.productId);
+                  const isPending = item.status === 'pending';
+                  return (
+                    <div key={item._id} className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
+                          isPending ? 'bg-pink-100 text-pink-500' : 'bg-emerald-100 text-emerald-600')}>
+                          <Package size={16} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-gray-800 text-sm leading-snug">{item.productName}</p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-gray-400">
+                              Cant: <span className="text-gray-600 font-black">{item.quantity}</span>
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                              <Clock size={9} />
+                              {new Date(item.saleDate).toLocaleDateString('es-PY', { day: '2-digit', month: 'short', year: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {!isPending && (
+                            <span className="font-black text-emerald-600 text-base">Gs. {n(item.specialPrice).toLocaleString()}</span>
+                          )}
+                          {prod && (
+                            <button
+                              onClick={() => openEdit(item)}
+                              className="p-1.5 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all"
+                              title="Editar producto">
+                              <Edit2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Input asignación */}
+                      {isPending && (
+                        <div className="mt-3 flex gap-2 items-center pl-12">
+                          <div className="flex-1">
+                            <NumericInput
+                              value={prices[item._id] ?? ''}
+                              onChange={raw => setPrices(prev => ({ ...prev, [item._id]: raw }))}
+                              placeholder="Precio en Gs."
+                              className="w-full p-2.5 bg-gray-50 border-2 border-gray-200 focus:border-pink-400 focus:bg-white rounded-xl outline-none font-black text-base text-center transition-all"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleAssign(item)}
+                            disabled={saving === item._id || !(parseInt((prices[item._id] ?? '').replace(/\D/g, '')) > 0)}
+                            className="px-4 py-2.5 bg-pink-500 hover:bg-pink-600 text-white font-black rounded-xl shadow-md shadow-pink-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap text-sm">
+                            {saving === item._id
+                              ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
+                              : <><CheckCircle size={14} /> Asignar</>
+                            }
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
