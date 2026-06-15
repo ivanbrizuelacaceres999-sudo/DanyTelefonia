@@ -343,7 +343,8 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         quantity: 1,
         priceType,
       }]);
-      setQuickCreatedIds(prev => [...prev, created._id]);
+      const hasLocation = quickModal.estante.trim() || quickModal.columna.trim() || quickModal.fila.trim();
+      if (!hasLocation) setQuickCreatedIds(prev => [...prev, created._id]);
       setQuickModal(null);
       setErrorMsg('');
       onRefresh();
