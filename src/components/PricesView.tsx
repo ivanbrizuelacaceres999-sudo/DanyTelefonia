@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Tag, Clock, CheckCircle, Package, AlertTriangle, Edit2, X, MapPin } from 'lucide-react';
+import { Tag, Clock, CheckCircle, Package, AlertTriangle, Edit2, X, MapPin, Search, Sparkles, Users } from 'lucide-react';
 import { api } from '../api';
 import { SpecialPriceItem, Product, Category, Manufacturer } from '../types';
 import { NumericInput } from './ui/NumericInput';
@@ -15,24 +15,26 @@ interface PricesViewProps {
   onRefresh: () => void;
 }
 
-const n = (v: any): number => {
-  const x = Number(v);
-  return isNaN(x) ? 0 : x;
-};
-
-const parseLocation = (loc: string) => {
-  const [estante = '', columna = '', fila = ''] = (loc || '').split('|');
-  return { estante, columna, fila };
-};
+const n = (v: any): number => { const x = Number(v); return isNaN(x) ? 0 : x; };
+const parseLocation = (loc: string) => { const [estante = '', columna = '', fila = ''] = (loc || '').split('|'); return { estante, columna, fila }; };
 const formatLocation = (e: string, c: string, f: string) => [e, c, f].join('|');
 
+const COLORS = [
+  { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200', header: 'bg-indigo-50' },
+  { bg: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-200', header: 'bg-violet-50' },
+  { bg: 'bg-sky-100',    text: 'text-sky-700',    border: 'border-sky-200',    header: 'bg-sky-50'    },
+  { bg: 'bg-teal-100',   text: 'text-teal-700',   border: 'border-teal-200',   header: 'bg-teal-50'   },
+  { bg: 'bg-rose-100',   text: 'text-rose-700',   border: 'border-rose-200',   header: 'bg-rose-50'   },
+];
+
 export const PricesView = ({ specialPriceItems, products, categories, manufacturers, exchangeRate = 6300, onRefresh }: PricesViewProps) => {
-  const [tab, setTab]           = useState<'pending' | 'all'>('pending');
-  const [prices, setPrices]     = useState<Record<string, string>>({});
-  const [saving, setSaving]     = useState<string | null>(null);
-  const [error, setError]       = useState<string | null>(null);
+  const [tab, setTab]         = useState<'pending' | 'all'>('pending');
+  const [search, setSearch]   = useState('');
+  const [prices, setPrices]   = useState<Record<string, string>>({});
+  const [saving, setSaving]   = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editLoc, setEditLoc]   = useState({ estante: '', columna: '', fila: '' });
+  const [editLoc, setEditLoc] = useState({ estante: '', columna: '', fila: '' });
   const [editCostUsd, setEditCostUsd] = useState('');
   const [editSaving, setEditSaving]   = useState(false);
 
@@ -57,9 +59,7 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
       onRefresh();
     } catch (e: any) {
       setError(e.message ?? 'Error al asignar precio');
-    } finally {
-      setSaving(null);
-    }
+    } finally { setSaving(null); }
   };
 
   const handleUpdateProduct = async (e: React.FormEvent) => {
@@ -75,61 +75,98 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
       onRefresh();
     } catch (err: any) {
       setError(err?.message ?? 'Error al guardar');
-    } finally {
-      setEditSaving(false);
-    }
+    } finally { setEditSaving(false); }
   };
 
-  const displayItems = tab === 'pending' ? pending : all;
+  const baseItems = tab === 'pending' ? pending : all;
 
-  // Agrupar por mayorista
-  const grouped = displayItems.reduce((acc, item) => {
-    const key = item.wholesalerId || '__sin__';
-    if (!acc[key]) acc[key] = { name: item.wholesalerName || 'Sin mayorista', items: [] };
-    acc[key].items.push(item);
-    return acc;
-  }, {} as Record<string, { name: string; items: SpecialPriceItem[] }>);
-  const groups = Object.entries(grouped);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return baseItems;
+    return baseItems.filter(i =>
+      i.productName.toLowerCase().includes(q) ||
+      (i.wholesalerName ?? '').toLowerCase().includes(q)
+    );
+  }, [baseItems, search]);
+
+  const groups = useMemo(() => {
+    const map: Record<string, { name: string; items: SpecialPriceItem[]; colorIdx: number }> = {};
+    const keys: string[] = [];
+    filtered.forEach(item => {
+      const key = item.wholesalerId || '__sin__';
+      if (!map[key]) {
+        map[key] = { name: item.wholesalerName || 'Sin mayorista', items: [], colorIdx: keys.length % COLORS.length };
+        keys.push(key);
+      }
+      map[key].items.push(item);
+    });
+    return keys.map(k => ({ key: k, ...map[k] }));
+  }, [filtered]);
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
 
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 bg-pink-100 rounded-[20px] flex items-center justify-center text-pink-600">
-          <Tag size={28} />
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 bg-gradient-to-br from-pink-400 to-rose-500 rounded-[20px] flex items-center justify-center text-white shadow-lg shadow-pink-200 flex-shrink-0">
+          <Sparkles size={26} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-black text-gray-800 tracking-tighter">Precios Especiales</h1>
           <p className="text-sm font-bold text-gray-400">Asigná precios pendientes y editá productos</p>
         </div>
-        {pending.length > 0 && (
-          <span className="ml-auto bg-pink-100 text-pink-700 font-black text-xs px-3 py-1.5 rounded-full">
-            {pending.length} pendiente{pending.length !== 1 ? 's' : ''}
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {pending.length > 0 && (
+            <div className="text-center bg-pink-50 border border-pink-100 rounded-2xl px-4 py-2">
+              <p className="text-2xl font-black text-pink-600 leading-none">{pending.length}</p>
+              <p className="text-[10px] font-black text-pink-400 uppercase tracking-widest mt-0.5">pendiente{pending.length !== 1 ? 's' : ''}</p>
+            </div>
+          )}
+          <div className="text-center bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2">
+            <p className="text-2xl font-black text-gray-700 leading-none">{all.length}</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">total</p>
+          </div>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
-        <button
-          onClick={() => setTab('pending')}
-          className={cn('px-5 py-2 rounded-xl font-black text-sm transition-all',
-            tab === 'pending' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
-          Pendientes
-          {pending.length > 0 && (
-            <span className="ml-1.5 bg-pink-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{pending.length}</span>
+      {/* Tabs + Buscador */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl w-fit">
+          <button onClick={() => setTab('pending')}
+            className={cn('px-5 py-2 rounded-xl font-black text-sm transition-all',
+              tab === 'pending' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
+            Pendientes
+            {pending.length > 0 && (
+              <span className="ml-1.5 bg-pink-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{pending.length}</span>
+            )}
+          </button>
+          <button onClick={() => setTab('all')}
+            className={cn('px-5 py-2 rounded-xl font-black text-sm transition-all',
+              tab === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
+            Historial
+            {all.length > 0 && (
+              <span className="ml-1.5 bg-indigo-400 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{all.length}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Buscador */}
+        <div className="relative flex-1 max-w-sm">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar producto o mayorista…"
+            className="w-full pl-9 pr-9 py-2.5 bg-white border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 rounded-2xl outline-none font-bold text-sm text-gray-700 placeholder-gray-300 transition-all"
+          />
+          {search && (
+            <button onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
+              <X size={14} />
+            </button>
           )}
-        </button>
-        <button
-          onClick={() => setTab('all')}
-          className={cn('px-5 py-2 rounded-xl font-black text-sm transition-all',
-            tab === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600')}>
-          Historial
-          {all.length > 0 && (
-            <span className="ml-1.5 bg-indigo-400 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{all.length}</span>
-          )}
-        </button>
+        </div>
       </div>
 
       {error && (
@@ -139,52 +176,70 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
         </div>
       )}
 
+      {/* Sin resultados de búsqueda */}
+      {search && filtered.length === 0 && (
+        <div className="text-center py-12 text-gray-300">
+          <Search size={36} className="mx-auto mb-3" />
+          <p className="font-black text-sm uppercase tracking-widest">Sin resultados para "{search}"</p>
+        </div>
+      )}
+
       {/* Grupos por mayorista */}
-      <div className="space-y-5">
-        {groups.length === 0 ? (
+      <div className="space-y-4">
+        {!search && groups.length === 0 ? (
           <div className="text-center py-20 text-gray-300">
             {tab === 'pending' ? <CheckCircle size={40} className="mx-auto mb-3" /> : <Tag size={40} className="mx-auto mb-3" />}
             <p className="font-black text-sm uppercase tracking-widest">
               {tab === 'pending' ? 'Sin pendientes' : 'Sin ventas especiales'}
             </p>
           </div>
-        ) : groups.map(([key, group]) => {
-          const pendingCount = group.items.filter(i => i.status === 'pending').length;
+        ) : groups.map(({ key, name, items, colorIdx }) => {
+          const color = COLORS[colorIdx];
+          const pendingCount = items.filter(i => i.status === 'pending').length;
           return (
-            <div key={key} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <motion.div key={key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
               {/* Cabecera del grupo */}
-              <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 border-b border-gray-100">
-                <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-sm">
-                  {group.name.charAt(0).toUpperCase()}
+              <div className={cn('flex items-center gap-3 px-5 py-3.5 border-b border-gray-100', color.header)}>
+                <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center font-black text-base flex-shrink-0', color.bg, color.text)}>
+                  {name.charAt(0).toUpperCase()}
                 </div>
-                <p className="font-black text-gray-700 text-sm">{group.name}</p>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className={cn('font-black text-sm', color.text)}>{name}</p>
+                  <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+                    <Users size={9} /> {items.length} producto{items.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
                   {pendingCount > 0 && (
-                    <span className="text-[10px] font-black text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-pink-600 bg-pink-50 border border-pink-100 px-2.5 py-1 rounded-full">
                       {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
                     </span>
                   )}
-                  <span className="text-[10px] font-bold text-gray-400">
-                    {group.items.length} producto{group.items.length !== 1 ? 's' : ''}
-                  </span>
+                  {pendingCount === 0 && tab !== 'pending' && (
+                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <CheckCircle size={9} /> Completo
+                    </span>
+                  )}
                 </div>
               </div>
 
               {/* Productos del grupo */}
               <div className="divide-y divide-gray-50">
-                {group.items.map(item => {
+                {items.map(item => {
                   const prod = products.find(p => p._id === item.productId);
                   const isPending = item.status === 'pending';
                   return (
-                    <div key={item._id} className="p-4">
+                    <div key={item._id} className="px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0',
+                        <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0',
                           isPending ? 'bg-pink-100 text-pink-500' : 'bg-emerald-100 text-emerald-600')}>
-                          <Package size={16} />
+                          <Package size={15} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-black text-gray-800 text-sm leading-snug">{item.productName}</p>
-                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                          <p className="font-black text-gray-800 text-sm leading-snug truncate">{item.productName}</p>
+                          <div className="flex items-center gap-3 mt-0.5">
                             <span className="text-[10px] font-bold text-gray-400">
                               Cant: <span className="text-gray-600 font-black">{item.quantity}</span>
                             </span>
@@ -195,13 +250,14 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {!isPending && (
-                            <span className="font-black text-emerald-600 text-base">Gs. {n(item.specialPrice).toLocaleString()}</span>
+                          {isPending ? (
+                            <span className="text-[10px] font-black text-pink-500 bg-pink-50 px-2 py-0.5 rounded-lg border border-pink-100">PENDIENTE</span>
+                          ) : (
+                            <span className="font-black text-emerald-600 text-sm">Gs. {n(item.specialPrice).toLocaleString()}</span>
                           )}
                           {prod && (
-                            <button
-                              onClick={() => openEdit(item)}
-                              className="p-1.5 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all"
+                            <button onClick={() => openEdit(item)}
+                              className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
                               title="Editar producto">
                               <Edit2 size={14} />
                             </button>
@@ -211,22 +267,20 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
 
                       {/* Input asignación */}
                       {isPending && (
-                        <div className="mt-3 flex gap-2 items-center pl-12">
-                          <div className="flex-1">
-                            <NumericInput
-                              value={prices[item._id] ?? ''}
-                              onChange={raw => setPrices(prev => ({ ...prev, [item._id]: raw }))}
-                              placeholder="Precio en Gs."
-                              className="w-full p-2.5 bg-gray-50 border-2 border-gray-200 focus:border-pink-400 focus:bg-white rounded-xl outline-none font-black text-base text-center transition-all"
-                            />
-                          </div>
+                        <div className="mt-3 flex gap-2 items-center pl-11">
+                          <NumericInput
+                            value={prices[item._id] ?? ''}
+                            onChange={raw => setPrices(prev => ({ ...prev, [item._id]: raw }))}
+                            placeholder="Ingresá el precio en Gs."
+                            className="flex-1 p-2.5 bg-gray-50 border-2 border-gray-200 focus:border-pink-400 focus:bg-white rounded-xl outline-none font-black text-sm text-center transition-all"
+                          />
                           <button
                             onClick={() => handleAssign(item)}
                             disabled={saving === item._id || !(parseInt((prices[item._id] ?? '').replace(/\D/g, '')) > 0)}
                             className="px-4 py-2.5 bg-pink-500 hover:bg-pink-600 text-white font-black rounded-xl shadow-md shadow-pink-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap text-sm">
                             {saving === item._id
                               ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
-                              : <><CheckCircle size={14} /> Asignar</>
+                              : <><CheckCircle size={13} /> Asignar</>
                             }
                           </button>
                         </div>
@@ -235,12 +289,12 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
 
-      {/* Modal editar producto — igual que StockView */}
+      {/* Modal editar producto */}
       <AnimatePresence>
         {editingProduct && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -375,7 +429,7 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
                           <input value={editLoc[field]}
                             onChange={e => setEditLoc({ ...editLoc, [field]: e.target.value })}
                             className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-400 focus:bg-white rounded-2xl outline-none transition-all font-bold text-sm uppercase"
-                            placeholder={field === 'estante' ? 'A' : field === 'columna' ? '1' : '1'} />
+                            placeholder={field === 'estante' ? 'A' : '1'} />
                         </div>
                       ))}
                     </div>
