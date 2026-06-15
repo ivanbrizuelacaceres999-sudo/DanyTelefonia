@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Tag, Clock, CheckCircle, Package, AlertTriangle, Edit2, X, MapPin, Search, Sparkles, Users } from 'lucide-react';
+import { Tag, Clock, CheckCircle, Package, AlertTriangle, Edit2, X, MapPin, Search, Sparkles, Users, Lock } from 'lucide-react';
 import { api } from '../api';
 import { SpecialPriceItem, Product, Category, Manufacturer } from '../types';
 import { NumericInput } from './ui/NumericInput';
@@ -38,6 +38,11 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
   const [editCostUsd, setEditCostUsd] = useState('');
   const [editSaving, setEditSaving]   = useState(false);
 
+  // Modal forzado de precios faltantes post-asignación
+  const [forcedModal, setForcedModal] = useState<{ product: Product } | null>(null);
+  const [forcedPrices, setForcedPrices] = useState({ salePrice: '', priceWholesale: '', priceCheap: '' });
+  const [forcedSaving, setForcedSaving] = useState(false);
+
   const pending = specialPriceItems.filter(i => i.status === 'pending');
   const all     = specialPriceItems;
 
@@ -57,9 +62,40 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
       await (api as any).assignSpecialPrice(item._id, price);
       setPrices(prev => { const p = { ...prev }; delete p[item._id]; return p; });
       onRefresh();
+      // Verificar si al producto le faltan precios
+      const prod = products.find(p => p._id === item.productId);
+      if (prod) {
+        const missing = !n(prod.salePrice) || !n((prod as any).priceWholesale) || !n((prod as any).priceCheap);
+        if (missing) {
+          setForcedModal({ product: prod });
+          setForcedPrices({
+            salePrice:      n(prod.salePrice) ? String(prod.salePrice) : '',
+            priceWholesale: n((prod as any).priceWholesale) ? String((prod as any).priceWholesale) : '',
+            priceCheap:     n((prod as any).priceCheap) ? String((prod as any).priceCheap) : '',
+          });
+        }
+      }
     } catch (e: any) {
       setError(e.message ?? 'Error al asignar precio');
     } finally { setSaving(null); }
+  };
+
+  const handleForcedSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forcedModal) return;
+    setForcedSaving(true);
+    try {
+      await api.updateProduct(forcedModal.product._id, {
+        ...forcedModal.product,
+        salePrice:      parseInt(forcedPrices.salePrice.replace(/\D/g, '')) || 0,
+        priceWholesale: parseInt(forcedPrices.priceWholesale.replace(/\D/g, '')) || 0,
+        priceCheap:     parseInt(forcedPrices.priceCheap.replace(/\D/g, '')) || 0,
+      } as any);
+      setForcedModal(null);
+      onRefresh();
+    } catch (err: any) {
+      setError(err?.message ?? 'Error al guardar precios');
+    } finally { setForcedSaving(false); }
   };
 
   const handleUpdateProduct = async (e: React.FormEvent) => {
@@ -293,6 +329,111 @@ export const PricesView = ({ specialPriceItems, products, categories, manufactur
           );
         })}
       </div>
+
+      {/* Modal FORZADO — completar precios faltantes */}
+      <AnimatePresence>
+        {forcedModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.9, y: 24 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 24 }}
+              className="bg-white rounded-[28px] shadow-2xl w-full max-w-md overflow-hidden">
+
+              {/* Cabecera con advertencia */}
+              <div className="bg-amber-500 px-7 pt-7 pb-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <Lock size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-white/70 text-[10px] font-black uppercase tracking-widest">Acción requerida</p>
+                    <h3 className="text-white font-black text-lg leading-tight">Completá los precios</h3>
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm font-bold leading-snug">
+                  <span className="text-white font-black">{forcedModal.product.model}</span> no tiene todos los precios de venta. Completalos para continuar.
+                </p>
+              </div>
+
+              <form onSubmit={handleForcedSave} className="px-7 py-6 space-y-4">
+                {/* Normal */}
+                <div>
+                  <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1 flex items-center gap-1.5 mb-1.5">
+                    Precio Normal (Gs.)
+                    {n(forcedModal.product.salePrice) > 0
+                      ? <span className="text-[9px] text-emerald-400 font-bold normal-case">ya cargado</span>
+                      : <span className="text-[9px] text-red-400 font-bold normal-case">falta</span>
+                    }
+                  </label>
+                  <NumericInput
+                    value={forcedPrices.salePrice}
+                    onChange={raw => setForcedPrices(p => ({ ...p, salePrice: raw }))}
+                    placeholder="0"
+                    className={cn('w-full p-3.5 rounded-2xl outline-none font-black text-base transition-all border-2',
+                      n(forcedModal.product.salePrice) > 0
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-gray-50 border-transparent focus:border-emerald-500 focus:bg-white'
+                    )}
+                  />
+                </div>
+
+                {/* Mayorista */}
+                <div>
+                  <label className="text-[10px] font-black text-purple-500 uppercase tracking-widest ml-1 flex items-center gap-1.5 mb-1.5">
+                    🏪 Precio Mayorista (Gs.)
+                    {n((forcedModal.product as any).priceWholesale) > 0
+                      ? <span className="text-[9px] text-emerald-400 font-bold normal-case">ya cargado</span>
+                      : <span className="text-[9px] text-red-400 font-bold normal-case">falta</span>
+                    }
+                  </label>
+                  <NumericInput
+                    value={forcedPrices.priceWholesale}
+                    onChange={raw => setForcedPrices(p => ({ ...p, priceWholesale: raw }))}
+                    placeholder="0"
+                    className={cn('w-full p-3.5 rounded-2xl outline-none font-black text-base transition-all border-2',
+                      n((forcedModal.product as any).priceWholesale) > 0
+                        ? 'bg-purple-50 border-purple-200 text-purple-700'
+                        : 'bg-gray-50 border-transparent focus:border-purple-500 focus:bg-white'
+                    )}
+                  />
+                </div>
+
+                {/* Tacaño */}
+                <div>
+                  <label className="text-[10px] font-black text-orange-500 uppercase tracking-widest ml-1 flex items-center gap-1.5 mb-1.5">
+                    💸 Precio Tacaño (Gs.)
+                    {n((forcedModal.product as any).priceCheap) > 0
+                      ? <span className="text-[9px] text-emerald-400 font-bold normal-case">ya cargado</span>
+                      : <span className="text-[9px] text-red-400 font-bold normal-case">falta</span>
+                    }
+                  </label>
+                  <NumericInput
+                    value={forcedPrices.priceCheap}
+                    onChange={raw => setForcedPrices(p => ({ ...p, priceCheap: raw }))}
+                    placeholder="0"
+                    className={cn('w-full p-3.5 rounded-2xl outline-none font-black text-base transition-all border-2',
+                      n((forcedModal.product as any).priceCheap) > 0
+                        ? 'bg-orange-50 border-orange-200 text-orange-700'
+                        : 'bg-gray-50 border-transparent focus:border-orange-400 focus:bg-white'
+                    )}
+                  />
+                </div>
+
+                <button type="submit" disabled={forcedSaving ||
+                    !(parseInt(forcedPrices.salePrice.replace(/\D/g,''))||0) ||
+                    !(parseInt(forcedPrices.priceWholesale.replace(/\D/g,''))||0) ||
+                    !(parseInt(forcedPrices.priceCheap.replace(/\D/g,''))||0)
+                  }
+                  className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black shadow-lg shadow-amber-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2">
+                  {forcedSaving
+                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
+                    : <><CheckCircle size={16} /> Guardar y continuar</>
+                  }
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal editar producto */}
       <AnimatePresence>
