@@ -35,6 +35,7 @@ interface QuickProductForm {
   salePrice: string;
   priceWholesale: string;
   priceCheap: string;
+  isEspecial: boolean;
   quantity: string;
   estante: string;
   columna: string;
@@ -310,8 +311,8 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
     const sp = parseInt(quickModal.salePrice.replace(/\D/g, '')) || 0;
     const pw = parseInt(quickModal.priceWholesale.replace(/\D/g, '')) || 0;
     const pc = parseInt(quickModal.priceCheap.replace(/\D/g, '')) || 0;
-    if (!quickModal.model.trim() || (sp === 0 && pw === 0 && pc === 0)) {
-      setErrorMsg('Completá el nombre y al menos un precio de venta.');
+    if (!quickModal.model.trim() || (!quickModal.isEspecial && sp === 0 && pw === 0 && pc === 0)) {
+      setErrorMsg('Completá el nombre y al menos un precio de venta (o marcá Precio Especial).');
       return;
     }
     const qty = Math.max(1, parseInt(quickModal.quantity) || 1);
@@ -331,8 +332,8 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         isWholesale: false,
         barcode: '',
       });
-      const cartPrice = sp > 0 ? sp : pw > 0 ? pw : pc;
-      const priceType: PriceType = sp > 0 ? 'normal' : pw > 0 ? 'wholesale' : 'cheap';
+      const cartPrice = quickModal.isEspecial ? 0 : (sp > 0 ? sp : pw > 0 ? pw : pc);
+      const priceType: PriceType = quickModal.isEspecial ? 'especial' : (sp > 0 ? 'normal' : pw > 0 ? 'wholesale' : 'cheap');
       setCart(prev => [...prev, {
         id: created._id,
         type: 'product' as const,
@@ -905,7 +906,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Catalogo</p>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setQuickModal({ model: '', categoryId: '', manufacturerId: '', costPrice: '', salePrice: '', priceWholesale: '', priceCheap: '', quantity: '1', estante: '', columna: '', fila: '' })}
+                onClick={() => setQuickModal({ model: '', categoryId: '', manufacturerId: '', costPrice: '', salePrice: '', priceWholesale: '', priceCheap: '', isEspecial: false, quantity: '1', estante: '', columna: '', fila: '' })}
                 className="text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200">
                 <Zap size={10} /> Nuevo Prod.
               </button>
@@ -1822,6 +1823,18 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                       />
                     </div>
                   </div>
+                  {/* Especial toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setQuickModal(p => p ? { ...p, isEspecial: !p.isEspecial } : p)}
+                    className={`w-full p-3 rounded-2xl border-2 font-black text-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      quickModal.isEspecial
+                        ? 'bg-pink-500 border-pink-500 text-white'
+                        : 'bg-pink-50 border-transparent text-pink-500 hover:border-pink-300'
+                    }`}
+                  >
+                    ✨ {quickModal.isEspecial ? 'Precio Especial activado — se asigna luego' : 'Precio Especial (asignar después)'}
+                  </button>
                 </div>
               </div>
 
