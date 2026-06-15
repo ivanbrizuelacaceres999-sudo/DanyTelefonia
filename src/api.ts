@@ -1078,17 +1078,19 @@ export const api = {
   // ─── Precios Especiales ──────────────────────────────────────
   createSpecialPriceItem: async (body: {
     saleId: string; productId?: string; productName: string;
-    quantity: number; wholesalerId?: string; wholesalerName?: string; saleDate: string;
+    quantity: number; specialPrice?: number; wholesalerId?: string; wholesalerName?: string; saleDate: string;
   }) => {
+    const hasPrice = (body.specialPrice ?? 0) > 0;
     const { data } = await supabase.from('special_price_items').insert({
       sale_id: body.saleId,
       product_id: body.productId || null,
       product_name: body.productName,
       quantity: body.quantity,
+      special_price: hasPrice ? body.specialPrice : null,
       wholesaler_id: body.wholesalerId || null,
       wholesaler_name: body.wholesalerName || null,
       sale_date: body.saleDate,
-      status: 'pending',
+      status: hasPrice ? 'assigned' : 'pending',
     }).select().single();
     await broadcast('special-price-items');
     return toClient(data);

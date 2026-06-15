@@ -308,7 +308,7 @@ function App() {
       case 'gastos':        return <GastosView fixedCosts={fixedCosts} users={users} onRefresh={fetchData} />;
       case 'warranty':      return <WarrantyView sales={sales} products={products} manufacturers={manufacturers} onRefresh={fetchData} />;
       case 'users':         return <UsersView users={users} onRefresh={fetchData} />;
-      case 'precios':         return <PricesView specialPriceItems={specialPriceItems} onRefresh={fetchData} />;
+      case 'precios':         return <PricesView specialPriceItems={specialPriceItems} products={products} categories={categories} manufacturers={manufacturers} exchangeRate={exchangeRate} onRefresh={fetchData} />;
       case 'configuraciones': return <ConfiguracionesView />;
       default:              return <DashboardView products={products} repairs={repairs} sales={sales} categories={categories} onNavigate={setActiveTab} />;
     }

@@ -534,7 +534,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         sessionId: session?._id,
       });
 
-      // ── Registrar ítems de precio especial ──
+      // ── Registrar ítems de precio especial (todos, con o sin precio) ──
       const specialItemsInCart = cart.filter(i => i.priceType === 'especial');
       if (specialItemsInCart.length > 0) {
         const wsName = wholesalerId ? wholesalers.find(w => w._id === wholesalerId)?.name : undefined;
@@ -545,6 +545,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
               productId: si.type === 'product' ? si.id : undefined,
               productName: si.name,
               quantity: si.quantity,
+              specialPrice: si.price > 0 ? si.price : undefined,
               wholesalerId: wholesalerId || undefined,
               wholesalerName: wsName,
               saleDate: sale.date,
