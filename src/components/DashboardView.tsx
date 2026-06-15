@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, ShoppingBag, Wrench, AlertCircle, DollarSign, CreditCard, Smartphone, Clock, CheckCircle, ShieldAlert, ChevronRight, ShieldCheck } from 'lucide-react';
-import { Product, Repair, Sale, CashSession } from '../types';
+import { Product, Repair, Sale, CashSession, Category } from '../types';
 import { api } from '../api';
 import { cn } from '../lib/utils';
 
@@ -9,10 +9,11 @@ interface DashboardViewProps {
   products:   Product[];
   repairs:    Repair[];
   sales:      Sale[];
+  categories: Category[];
   onNavigate: (tab: string) => void;
 }
 
-export const DashboardView = ({ products, repairs, sales, onNavigate }: DashboardViewProps) => {
+export const DashboardView = ({ products, repairs, sales, categories, onNavigate }: DashboardViewProps) => {
   const [session, setSession]               = useState<CashSession | null>(null);
   const [todaySales, setTodaySales]         = useState<Sale[]>([]);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
@@ -45,7 +46,9 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
   const todayRevenue   = todaySales.reduce((a, s) => a + s.total, 0);
   const todayOps       = todaySales.length;
   const pendingRepairs = repairs.filter(r => r.status === 'pending' || r.status === 'in_progress');
-  const lowStockProducts = products.filter(p => p.quantity <= 3 && p.quantity > 0);
+  const catMinStock = new Map(categories.map(c => [c._id, c.minStock]));
+  const thresh = (p: Product) => catMinStock.get(p.categoryId ?? '') ?? (p as any).lowStockAlert ?? 5;
+  const lowStockProducts = products.filter(p => p.quantity > 0 && p.quantity <= thresh(p));
   const outOfStock       = products.filter(p => p.quantity === 0);
   const cashInBox        = session ? session.initialCash + session.totals.cash - totalWithdrawn : 0;
 
@@ -235,7 +238,7 @@ export const DashboardView = ({ products, repairs, sales, onNavigate }: Dashboar
               <AlertCircle size={22} />
             </div>
             <p className="text-3xl font-black text-gray-800 tracking-tighter">{lowStockProducts.length}</p>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Stock Bajo (≤3)</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Stock Bajo</p>
             {outOfStock.length > 0 && (
               <p className="text-[9px] text-red-500 font-bold mt-0.5">{outOfStock.length} sin stock</p>
             )}

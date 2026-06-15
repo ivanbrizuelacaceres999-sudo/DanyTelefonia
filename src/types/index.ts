@@ -35,6 +35,8 @@ export interface ExpenseConfig {
 export interface Category {
   _id: string;
   name: string;
+  warrantyDays?: number;
+  minStock?: number;
 }
 
 export interface Wholesaler {

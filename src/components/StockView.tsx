@@ -112,8 +112,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
   const [newProduct, setNewProduct] = useState({
     model: '', categoryId: '', manufacturerId: undefined as string | undefined, quantity: 0, purchasedQuantity: 0, costPrice: 0, salePrice: 0, priceWholesale: 0, priceCheap: 0, location: '', isWholesale: false, barcode: ''
   });
-  const [newCategory, setNewCategory] = useState({ name: '', warrantyDays: '2', isLocal: false });
-  const [editingCategory, setEditingCategory] = useState<{ _id: string; name: string; warrantyDays: string; isLocal: boolean } | null>(null);
+  const [newCategory, setNewCategory] = useState({ name: '', warrantyDays: '2', minStock: '5', isLocal: false });
+  const [editingCategory, setEditingCategory] = useState<{ _id: string; name: string; warrantyDays: string; minStock: string; isLocal: boolean } | null>(null);
   const [isManagingManufacturers, setIsManagingManufacturers] = useState(false);
   const [newManufacturerName, setNewManufacturerName] = useState('');
   const [editingManufacturer, setEditingManufacturer] = useState<{ _id: string; name: string } | null>(null);
@@ -188,7 +188,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
   }, [mainTab]);
 
   const getLowStockCount = (catId: string) => {
-    return products.filter(p => p.categoryId === catId && p.quantity <= p.purchasedQuantity * 0.1).length;
+    const cat = categories.find(c => c._id === catId);
+    const threshold = cat?.minStock ?? 5;
+    return products.filter(p => p.categoryId === catId && p.quantity > 0 && p.quantity <= threshold).length;
   };
 
   const filteredCategories = categories.filter(c => 
@@ -270,10 +272,11 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     await api.createCategory({
       name:         newCategory.name,
       warrantyDays: parseInt(newCategory.warrantyDays) || 2,
+      minStock:     parseInt(newCategory.minStock) || 5,
       isLocal:      newCategory.isLocal,
     });
     setIsAddingCategory(false);
-    setNewCategory({ name: '', warrantyDays: '2', isLocal: false });
+    setNewCategory({ name: '', warrantyDays: '2', minStock: '5', isLocal: false });
     onRefresh();
   };
 
@@ -283,6 +286,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     await api.updateCategory(editingCategory._id, {
       name:         editingCategory.name,
       warrantyDays: parseInt(editingCategory.warrantyDays) || 2,
+      minStock:     parseInt(editingCategory.minStock) || 5,
       isLocal:      editingCategory.isLocal,
     });
     setEditingCategory(null);
@@ -1410,21 +1414,34 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                  Días de Garantía para esta categoría
-                </label>
-                <div className="flex items-center gap-3">
-                  <NumericInput
-                    placeholder="2"
-                    value={newCategory.warrantyDays}
-                    onChange={raw => setNewCategory({ ...newCategory, warrantyDays: raw })}
-                    className="w-28 p-4 bg-white border-2 border-transparent focus:border-indigo-600 rounded-2xl outline-none transition-all font-black text-2xl text-center"
-                  />
-                  <span className="font-bold text-gray-500 text-sm">días</span>
-                  <span className="text-[10px] font-bold text-gray-400 leading-tight">
-                    Todos los productos de esta categoría tendrán esta garantía por defecto
-                  </span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                    Días de Garantía
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <NumericInput
+                      placeholder="2"
+                      value={newCategory.warrantyDays}
+                      onChange={raw => setNewCategory({ ...newCategory, warrantyDays: raw })}
+                      className="w-24 p-4 bg-white border-2 border-transparent focus:border-indigo-600 rounded-2xl outline-none transition-all font-black text-2xl text-center"
+                    />
+                    <span className="font-bold text-gray-500 text-sm">días</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest ml-1">
+                    Stock Mínimo
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <NumericInput
+                      placeholder="5"
+                      value={newCategory.minStock}
+                      onChange={raw => setNewCategory({ ...newCategory, minStock: raw })}
+                      className="w-24 p-4 bg-amber-50 border-2 border-transparent focus:border-amber-400 rounded-2xl outline-none transition-all font-black text-2xl text-center"
+                    />
+                    <span className="font-bold text-gray-500 text-sm">unidades</span>
+                  </div>
                 </div>
               </div>
               <button type="submit" className="w-full bg-indigo-600 text-white font-black py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
@@ -1446,13 +1463,23 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                         onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })}
                         className="w-full p-3 bg-white border-2 border-transparent focus:border-indigo-600 rounded-xl outline-none font-bold text-sm"
                       />
-                      <div className="flex items-center gap-2">
-                        <NumericInput
-                          value={editingCategory.warrantyDays}
-                          onChange={raw => setEditingCategory({ ...editingCategory, warrantyDays: raw })}
-                          className="w-20 p-3 bg-white border-2 border-transparent focus:border-indigo-600 rounded-xl outline-none font-black text-center text-lg"
-                        />
-                        <span className="text-xs font-bold text-gray-500">días de garantía</span>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <NumericInput
+                            value={editingCategory.warrantyDays}
+                            onChange={raw => setEditingCategory({ ...editingCategory, warrantyDays: raw })}
+                            className="w-16 p-3 bg-white border-2 border-transparent focus:border-indigo-600 rounded-xl outline-none font-black text-center text-lg"
+                          />
+                          <span className="text-xs font-bold text-gray-500">días garantía</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <NumericInput
+                            value={editingCategory.minStock}
+                            onChange={raw => setEditingCategory({ ...editingCategory, minStock: raw })}
+                            className="w-16 p-3 bg-amber-50 border-2 border-transparent focus:border-amber-400 rounded-xl outline-none font-black text-center text-lg"
+                          />
+                          <span className="text-xs font-bold text-amber-600">stock mín.</span>
+                        </div>
                       </div>
                       <button type="button"
                         onClick={() => setEditingCategory({ ...editingCategory, isLocal: !editingCategory.isLocal })}
@@ -1491,7 +1518,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       </div>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => setEditingCategory({ _id: c._id, name: c.name, warrantyDays: String((c as any).warrantyDays ?? 2), isLocal: (c as any).isLocal ?? false })}
+                          onClick={() => setEditingCategory({ _id: c._id, name: c.name, warrantyDays: String((c as any).warrantyDays ?? 2), minStock: String(c.minStock ?? 5), isLocal: (c as any).isLocal ?? false })}
                           className="p-2 text-gray-300 hover:text-indigo-500 transition-colors"
                         >
                           <Edit2 size={16} />

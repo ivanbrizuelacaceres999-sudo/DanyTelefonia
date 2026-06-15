@@ -153,11 +153,17 @@ function App() {
             api.getProducts().then(p => {
               const updated = Array.isArray(p) ? p : [];
               setProducts(updated);
-              // Detectar productos que llegaron a stock bajo después de una venta
-              const justLowStock = updated.filter(prod => prod.quantity === 0);
+              // Detectar productos que llegaron a stock bajo o sin stock tras una venta
+              const catMap = new Map(categories.map(c => [c._id, c.minStock]));
+              const thresh = (prod: Product) => catMap.get(prod.categoryId ?? '') ?? (prod as any).lowStockAlert ?? 5;
+              const justLowStock = updated.filter(prod => prod.quantity >= 0 && prod.quantity <= thresh(prod));
               if (justLowStock.length > 0) {
-                setLowStockAlert(`⚠️ Sin stock: ${justLowStock.slice(0, 2).map(p => p.model).join(', ')}${justLowStock.length > 2 ? ` y ${justLowStock.length - 2} más` : ''}`);
-                setTimeout(() => setLowStockAlert(null), 5000);
+                const sinStock = justLowStock.filter(prod => prod.quantity === 0);
+                const label = sinStock.length > 0
+                  ? `Sin stock: ${sinStock.slice(0, 2).map(x => x.model).join(', ')}${sinStock.length > 2 ? ` y ${sinStock.length - 2} más` : ''}`
+                  : `Stock bajo: ${justLowStock.slice(0, 2).map(x => x.model).join(', ')}${justLowStock.length > 2 ? ` y ${justLowStock.length - 2} más` : ''}`;
+                setLowStockAlert(`⚠️ ${label}`);
+                setTimeout(() => setLowStockAlert(null), 6000);
               }
             });
             break;
@@ -278,13 +284,15 @@ function App() {
   };
   const handleLogout = async () => { await api.logout(); };
 
-  const lowStockCount = products.filter(p => p.quantity <= 3).length;
+  const catMinStock = new Map(categories.map(c => [c._id, c.minStock]));
+  const getThreshold = (p: Product) => catMinStock.get(p.categoryId ?? '') ?? (p as any).lowStockAlert ?? 5;
+  const lowStockCount = products.filter(p => p.quantity > 0 && p.quantity <= getThreshold(p)).length;
   if (!isAuthReady) return null;
   if (!user) return <LoginScreen onLogin={handleLogin} />;
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':     return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
+      case 'dashboard':     return <DashboardView products={products} repairs={repairs} sales={sales} categories={categories} onNavigate={setActiveTab} />;
       case 'stock':         return <StockView user={user} products={products} categories={categories} manufacturers={manufacturers} onRefresh={fetchData} exchangeRate={exchangeRate} />;
       case 'repairs':       return <RepairsView repairs={repairs} products={products} onRefresh={fetchData} users={users} />;
       case 'cashier':       return <CashierView user={user} products={products} repairs={repairs} wholesalers={wholesalers} reventaItems={reventaItems} reventaSuppliers={reventaSuppliers} categories={categories} manufacturers={manufacturers} onRefresh={fetchData} scanProduct={scanCartProduct} onScanHandled={() => setScanCartProduct(null)} />;
@@ -296,7 +304,7 @@ function App() {
       case 'warranty':      return <WarrantyView sales={sales} products={products} manufacturers={manufacturers} onRefresh={fetchData} />;
       case 'users':         return <UsersView users={users} onRefresh={fetchData} />;
       case 'configuraciones': return <ConfiguracionesView />;
-      default:              return <DashboardView products={products} repairs={repairs} sales={sales} onNavigate={setActiveTab} />;
+      default:              return <DashboardView products={products} repairs={repairs} sales={sales} categories={categories} onNavigate={setActiveTab} />;
     }
   };
 
