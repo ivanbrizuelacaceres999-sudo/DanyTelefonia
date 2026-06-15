@@ -36,6 +36,7 @@ interface QuickProductForm {
   priceWholesale: string;
   priceCheap: string;
   quantity: string;
+  location: string;
 }
 
 interface StockCompletionForm {
@@ -314,7 +315,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
         priceCheap: pc,
         quantity: qty,
         purchasedQuantity: qty,
-        location: '',
+        location: quickModal.location.trim() || '',
         isWholesale: false,
         barcode: '',
       });
@@ -838,7 +839,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Catalogo</p>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setQuickModal({ model: '', categoryId: '', manufacturerId: '', costPrice: '', salePrice: '', priceWholesale: '', priceCheap: '', quantity: '1' })}
+                onClick={() => setQuickModal({ model: '', categoryId: '', manufacturerId: '', costPrice: '', salePrice: '', priceWholesale: '', priceCheap: '', quantity: '1', location: '' })}
                 className="text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200">
                 <Zap size={10} /> Nuevo Prod.
               </button>
@@ -1753,6 +1754,19 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                     {manufacturers.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Ubicación */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 mb-1.5">
+                  <MapPin size={10} className="text-indigo-400" /> Ubicación (opc.)
+                </label>
+                <input
+                  value={quickModal.location}
+                  onChange={e => setQuickModal(p => p ? { ...p, location: e.target.value.toUpperCase() } : p)}
+                  placeholder="EJ: E2-C3-F1"
+                  className="w-full p-3 bg-gray-50 border-2 border-transparent focus:border-indigo-400 focus:bg-white rounded-2xl outline-none font-bold text-sm transition-all"
+                />
               </div>
 
               {errorMsg && (
