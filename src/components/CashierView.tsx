@@ -50,6 +50,16 @@ interface StockCompletionForm {
   quantity: string;
 }
 
+const parseLocation = (loc: string) => { const p = (loc || '').split('|'); return { estante: p[0] || '', columna: p[1] || '', fila: p[2] || '' }; };
+const displayLocation = (loc: string) => {
+  const { estante, columna, fila } = parseLocation(loc);
+  const parts: string[] = [];
+  if (estante) parts.push(`Est.${estante}`);
+  if (columna) parts.push(`Col.${columna}`);
+  if (fila)    parts.push(`Fila ${fila}`);
+  return parts.join(' · ');
+};
+
 // Convierte cualquier valor a número seguro
 const n = (v: any): number => {
   if (v === null || v === undefined || v === '') return 0;
@@ -481,7 +491,6 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   const checkout = async () => {
     if (cart.length === 0) { setErrorMsg('El carrito está vacío.'); return; }
     if (totalPaid < total) { setErrorMsg(`Falta cubrir Gs. ${resta.toLocaleString()} para completar el pago.`); return; }
-    if (totalPaid > total) { setErrorMsg(`El monto pagado excede el total en Gs. ${vuelto.toLocaleString()}.`); return; }
 
     // Capturar productos rápidos de este carrito ANTES de vaciarlo
     const quickSold = cart.filter(i => quickCreatedIds.includes(i.id));
@@ -876,6 +885,11 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                         </div>
                         <p className="font-black text-gray-800 text-sm leading-snug">{p.model}</p>
                         <p className="text-[10px] font-bold text-gray-400 mt-0.5">Stock: {p.quantity}</p>
+                        {displayLocation(p.location || '') && (
+                          <p className="text-[9px] font-bold text-indigo-400 mt-0.5 flex items-center gap-0.5 truncate">
+                            <MapPin size={8} className="shrink-0" />{displayLocation(p.location || '')}
+                          </p>
+                        )}
                         <p className="font-black text-emerald-600 mt-2 text-sm">Gs. {n(p.salePrice).toLocaleString()}</p>
                       </button>
                     );
@@ -894,6 +908,11 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                         </div>
                         <p className="font-black text-gray-800 text-sm leading-snug truncate">{r.deviceModel}</p>
                         <p className="text-[10px] font-bold text-gray-400 mt-0.5 truncate">{r.customerName}</p>
+                        {(r.shelfId || r.workbenchId) && (
+                          <p className="text-[9px] font-bold text-amber-500 mt-0.5 flex items-center gap-0.5">
+                            <MapPin size={8} className="shrink-0" />{r.shelfId ? 'En estante' : 'En mesa de trabajo'}
+                          </p>
+                        )}
                         <p className="font-black text-emerald-600 mt-2 text-sm">Gs. {n(r.totalCost).toLocaleString()}</p>
                         {inCart && <span className="mt-1 text-[9px] font-black text-emerald-600">En ticket</span>}
                       </button>
@@ -1086,7 +1105,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-2xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
           </div>
           <button onClick={checkout}
-            disabled={cart.length === 0 || isProcessing || totalPaid !== total || total === 0}
+            disabled={cart.length === 0 || isProcessing || totalPaid < total || total === 0}
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:shadow-none cursor-pointer text-sm">
             {isProcessing
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
@@ -1189,7 +1208,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             <p className="text-3xl font-black text-gray-900 tracking-tighter leading-none">Gs. {total.toLocaleString()}</p>
           </div>
           <button onClick={checkout}
-            disabled={cart.length === 0 || isProcessing || totalPaid !== total || total === 0}
+            disabled={cart.length === 0 || isProcessing || totalPaid < total || total === 0}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-7 py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-[0.98] transition-all flex items-center gap-2.5 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer text-sm whitespace-nowrap">
             {isProcessing
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Procesando...</>
