@@ -1117,7 +1117,13 @@ export const api = {
         si.id === item.product_id ? { ...si, price: specialPrice } : si
       );
       const newTotal = items.reduce((s: number, si: any) => s + (si.price ?? 0) * (si.quantity ?? 1), 0);
-      await supabase.from('sales').update({ items, total: newTotal }).eq('id', item.sale_id);
+
+      // Actualizar payments para reflejar el total real
+      const updatedPayments = (sale.payments ?? []).map((p: any) =>
+        p.method === 'credit' ? { ...p, amount: newTotal } : p
+      );
+
+      await supabase.from('sales').update({ items, total: newTotal, payments: updatedPayments }).eq('id', item.sale_id);
       await broadcast('sales');
 
       // Actualizar deuda del mayorista si la venta fue a crédito
