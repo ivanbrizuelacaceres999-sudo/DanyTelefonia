@@ -52,9 +52,11 @@ export function generateTicketId(): string {
 
 /** Notifica a todos los clientes conectados que un recurso cambió */
 export async function broadcast(event: string) {
-  await supabase.channel('phonemaster-updates').send({
-    type: 'broadcast',
-    event: 'data_update',
-    payload: { event },
-  });
+  try {
+    await supabase.channel('phonemaster-updates').send({
+      type: 'broadcast',
+      event: 'data_update',
+      payload: { event },
+    });
+  } catch { /* non-fatal — la operación DB ya se completó */ }
 }

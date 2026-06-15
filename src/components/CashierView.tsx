@@ -682,6 +682,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
       addModal.priceType === 'wholesale' && n(p.priceWholesale) > 0 ? n(p.priceWholesale) :
       addModal.priceType === 'cheap'     && n(p.priceCheap)     > 0 ? n(p.priceCheap)     :
       n(p.salePrice);
+    if (price === 0) { setErrorMsg('Este producto no tiene precio configurado. Establecé un precio antes de vender.'); return; }
     if (stock < quantity) { setErrorMsg(`Stock insuficiente: solo ${stock} unidades.`); return; }
     setCart(prev => {
       const ex = prev.find(i => i.id === p._id && i.type === 'product');

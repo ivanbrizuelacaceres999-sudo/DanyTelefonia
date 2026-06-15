@@ -594,6 +594,19 @@ export const api = {
       }
     }
 
+    // Actualizar deuda mayorista si hubo pago en crédito
+    if (body.wholesalerId) {
+      const creditTotal = (body.payments ?? [])
+        .filter((p: any) => p.method === 'credit')
+        .reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
+      if (creditTotal > 0) {
+        const { data: ws } = await supabase.from('wholesalers').select('debt').eq('id', body.wholesalerId).single();
+        if (ws) {
+          await supabase.from('wholesalers').update({ debt: (ws.debt ?? 0) + creditTotal }).eq('id', body.wholesalerId);
+        }
+      }
+    }
+
     // Actualizar sesión activa
     const { data: session } = await supabase.from('cash_sessions').select('*').eq('status', 'open').maybeSingle();
     if (session) {
