@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Plus, Search, Edit2, Trash2, Phone, Building2, Wallet, DollarSign, CheckCircle, Printer, History, X, ShoppingBag, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '../api';
-import { Wholesaler, UserProfile } from '../types';
+import { Wholesaler, UserProfile, SpecialPriceItem } from '../types';
 import { Modal } from './ui/Modal';
 import { NumericInput as NumInput } from './ui/NumericInput';
 import { ConfirmDialog } from './ui/ConfirmDialog';
@@ -10,6 +10,7 @@ import { cn } from '../lib/utils';
 
 interface WholesaleViewProps {
   wholesalers: Wholesaler[];
+  specialPriceItems?: SpecialPriceItem[];
   onRefresh: () => void;
   user?: UserProfile;
 }
@@ -100,7 +101,7 @@ const printPaymentTicket = (
 
 
 
-export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewProps) => {
+export const WholesaleView = ({ wholesalers, specialPriceItems = [], onRefresh, user }: WholesaleViewProps) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingWholesaler, setEditingWholesaler] = useState<Wholesaler | null>(null);
   const [payingWholesaler, setPayingWholesaler] = useState<Wholesaler | null>(null);
@@ -169,6 +170,9 @@ export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewPro
   };
 
   const totalDebt = wholesalers.reduce((a, w) => a + w.debt, 0);
+  const wholesalersWithPendingPrice = new Set(
+    specialPriceItems.filter(i => i.status === 'pending' && i.wholesalerId).map(i => i.wholesalerId)
+  );
 
   return (
     <div className="space-y-8">
@@ -207,9 +211,14 @@ export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewPro
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredWholesalers.map(w => (
+        {filteredWholesalers.map(w => {
+          const hasPendingPrice = wholesalersWithPendingPrice.has(w._id);
+          return (
           <motion.div layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-            key={w._id} className="bg-white p-7 rounded-[35px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all group relative overflow-hidden">
+            key={w._id} className={cn(
+              "p-7 rounded-[35px] shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden",
+              hasPendingPrice ? "bg-pink-50 border-2 border-pink-200" : "bg-white border border-gray-100"
+            )}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative">
               <div className="flex justify-between items-start mb-5">
@@ -227,6 +236,11 @@ export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewPro
                 {w.code && (
                   <span className="text-[9px] font-black px-2 py-0.5 bg-gray-800 text-white rounded-lg tracking-widest uppercase">
                     #{w.code}
+                  </span>
+                )}
+                {hasPendingPrice && (
+                  <span className="text-[9px] font-black px-2 py-0.5 bg-pink-500 text-white rounded-lg tracking-widest uppercase flex items-center gap-1">
+                    <Sparkles size={9} /> Precio pendiente
                   </span>
                 )}
               </div>
@@ -274,7 +288,8 @@ export const WholesaleView = ({ wholesalers, onRefresh, user }: WholesaleViewPro
               )}
             </div>
           </motion.div>
-        ))}
+          );
+        })}
         {filteredWholesalers.length === 0 && (
           <div className="col-span-3 text-center py-20 text-gray-300">
             <Building2 size={48} className="mx-auto mb-4" />

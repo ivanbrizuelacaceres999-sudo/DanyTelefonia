@@ -174,10 +174,7 @@ export const HistoryView = ({ fixedCosts, repairs = [], products = [], manufactu
     if (filterType === 'session') {
       const sess = sessions.find(s => sameId(s._id, selectedSessionId));
       if (!sess) return [];
-      try {
-        const sessDate = parseISO(sess.openedAt);
-        return sales.filter(s => { try { return isSameDay(parseISO(s.date), sessDate); } catch { return false; } });
-      } catch { return []; }
+      return sales.filter(s => sameId(s.sessionId, sess._id));
     }
     try {
       const d = parseISO(selectedDate);

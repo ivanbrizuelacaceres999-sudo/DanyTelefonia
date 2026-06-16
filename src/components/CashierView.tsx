@@ -287,6 +287,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
 
   // ── Nuevo diseño ────────────────────────────────────────────────
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'products' | 'repairs' | 'reventas'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [mobileView,    setMobileView]    = useState<'catalog' | 'ticket'>('catalog');
   const [discountType,  setDiscountType]  = useState<'gs' | 'pct'>('gs');
   const [addModal, setAddModal] = useState<{
@@ -632,6 +633,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
   const filteredProducts = products.filter(p =>
     n(p.quantity) > 0 &&
     hasLocation(p) &&
+    (categoryFilter === 'all' || p.categoryId === categoryFilter) &&
     (!searchTerm || p.model.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   // Solo reparaciones con estado 'listo' — se entregan al cobrar
@@ -855,6 +857,11 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
             onChange={e => { setSearchTerm(e.target.value); setErrorMsg(''); }}
             className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-2.5 pl-9 pr-4 outline-none font-bold text-gray-700 text-sm focus:bg-white focus:border-indigo-300 transition-all" />
         </div>
+        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
+          className="bg-gray-50 border border-gray-200 rounded-2xl py-2.5 px-3 outline-none font-bold text-gray-700 text-sm focus:bg-white focus:border-indigo-300 transition-all shrink-0">
+          <option value="all">Todas las categorías</option>
+          {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+        </select>
         <div className="flex gap-1 md:gap-1.5 shrink-0">
           {(['all', 'products', 'repairs', 'reventas'] as const).map(f => (
             <button key={f} onClick={() => setCatalogFilter(f)}
