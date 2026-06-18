@@ -385,7 +385,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
           {mainTab === 'stock' && (selectedCategoryId || selectedManufacturerId || selectedEstante || selectedColumna || selectedFila) && (
             <button
               onClick={() => { setSelectedCategoryId(null); setSelectedManufacturerId(null); setSelectedEstante(''); setSelectedColumna(''); setSelectedFila(''); }}
-              className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
+              className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-blue-600 hover:border-blue-100 transition-all shadow-sm"
             >
               <ArrowLeft size={24} />
             </button>
@@ -445,7 +445,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   setNewProduct(prev => ({ ...prev, categoryId: selectedCategoryId || '' }));
                   setIsAdding(true);
                 }}
-                className="bg-indigo-600 text-white font-black px-4 md:px-8 py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center gap-2 group text-sm"
+                className="bg-blue-600 text-white font-black px-4 md:px-8 py-3 rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 flex items-center gap-2 group text-sm"
               >
                 <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
                 <span className="hidden sm:inline">Nuevo </span>Producto
@@ -489,7 +489,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
           onClick={() => setMainTab('stock')}
           className={cn("px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2",
             mainTab === 'stock'
-              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
               : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50")}>
           <Package size={16} /> Inventario
         </button>
@@ -497,7 +497,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
           onClick={() => setMainTab('analytics')}
           className={cn("px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2",
             mainTab === 'analytics'
-              ? "bg-violet-600 text-white shadow-lg shadow-violet-200"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
               : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50")}>
           <BarChart2 size={16} /> Analítica
         </button>
@@ -527,7 +527,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               <button key={opt.key} onClick={() => setStatsSort(opt.key)}
                 className={cn("px-4 py-2 rounded-2xl font-black text-xs transition-all flex items-center gap-1.5",
                   statsSort === opt.key
-                    ? "bg-violet-600 text-white shadow-lg shadow-violet-200"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                     : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50")}>
                 {opt.icon} {opt.label}
               </button>
@@ -537,7 +537,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
           {loadingStats ? (
             <div className="flex items-center justify-center py-24">
               <div className="text-center space-y-3">
-                <RefreshCw size={32} className="animate-spin text-violet-400 mx-auto" />
+                <RefreshCw size={32} className="animate-spin text-blue-400 mx-auto" />
                 <p className="text-sm font-bold text-gray-400">Cargando estadísticas…</p>
               </div>
             </div>
@@ -641,14 +641,14 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                               </p>
                               <p className="text-[9px] text-emerald-400 font-bold">Gs.</p>
                             </div>
-                            <div className={cn("rounded-2xl p-3 text-center", entry.margin >= 20 ? 'bg-indigo-50' : entry.margin >= 10 ? 'bg-amber-50' : 'bg-red-50')}>
-                              <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", entry.margin >= 20 ? 'text-indigo-500' : entry.margin >= 10 ? 'text-amber-500' : 'text-red-500')}>Margen</p>
-                              <p className={cn("text-xl font-black tracking-tighter", entry.margin >= 20 ? 'text-indigo-600' : entry.margin >= 10 ? 'text-amber-600' : 'text-red-600')}>
+                            <div className={cn("rounded-2xl p-3 text-center", entry.margin >= 20 ? 'bg-blue-50' : entry.margin >= 10 ? 'bg-amber-50' : 'bg-red-50')}>
+                              <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", entry.margin >= 20 ? 'text-blue-500' : entry.margin >= 10 ? 'text-amber-500' : 'text-red-500')}>Margen</p>
+                              <p className={cn("text-xl font-black tracking-tighter", entry.margin >= 20 ? 'text-blue-600' : entry.margin >= 10 ? 'text-amber-600' : 'text-red-600')}>
                                 {entry.margin.toFixed(1)}%
                               </p>
                               <div className="mt-0.5">
                                 {entry.margin >= 20
-                                  ? <TrendingUp size={12} className="mx-auto text-indigo-400" />
+                                  ? <TrendingUp size={12} className="mx-auto text-blue-400" />
                                   : entry.margin >= 10
                                     ? <TrendingUp size={12} className="mx-auto text-amber-400" />
                                     : <TrendingDown size={12} className="mx-auto text-red-400" />}
@@ -672,7 +672,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Precios a los que se vendió</p>
                               <div className="flex flex-wrap gap-1.5">
                                 {(entry.prices as number[]).map((pr: number, i: number) => (
-                                  <span key={i} className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-xl">
+                                  <span key={i} className="text-[10px] font-black bg-blue-50 text-blue-600 px-2.5 py-1 rounded-xl">
                                     Gs. {pr.toLocaleString('es-PY')}
                                   </span>
                                 ))}
@@ -778,7 +778,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               </div>
               <div className="bg-white rounded-3xl p-5 border border-gray-100 text-center">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total invertido</p>
-                <p className="text-2xl font-black text-indigo-600">Gs. {totalInvested.toLocaleString()}</p>
+                <p className="text-2xl font-black text-blue-600">Gs. {totalInvested.toLocaleString()}</p>
               </div>
             </div>
 
@@ -818,7 +818,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       <div className="flex-1 min-w-0">
                         <p className="font-black text-gray-800 text-base truncate">{m.productModel || '—'}</p>
                         {m.categoryName && (
-                          <span className="inline-block text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest mt-1">
+                          <span className="inline-block text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase tracking-widest mt-1">
                             {m.categoryName}
                           </span>
                         )}
@@ -859,7 +859,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                         </div>
                         <div className="text-center">
                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</p>
-                          <p className="text-sm font-black text-indigo-600">Gs. {total.toLocaleString()}</p>
+                          <p className="text-sm font-black text-blue-600">Gs. {total.toLocaleString()}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -874,13 +874,13 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       {mainTab === 'stock' && (<>
 
       <div className="relative group">
-        <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+        <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={20} />
         <input
           type="text"
           placeholder="Buscar por modelo, fabricante o estante (ej: 'Samsung', 'Est. A1')..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full bg-white border border-gray-100 rounded-[30px] py-4 sm:py-6 pl-12 sm:pl-16 pr-6 sm:pr-8 outline-none shadow-sm focus:shadow-xl focus:border-indigo-100 transition-all font-bold text-gray-700"
+          className="w-full bg-white border border-gray-100 rounded-[30px] py-4 sm:py-6 pl-12 sm:pl-16 pr-6 sm:pr-8 outline-none shadow-sm focus:shadow-xl focus:border-blue-100 transition-all font-bold text-gray-700"
         />
       </div>
 
@@ -893,7 +893,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             className={cn(
               "px-3 py-1.5 rounded-2xl font-black text-xs transition-all",
               !selectedManufacturerId
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-200"
                 : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
             )}>
             Todos
@@ -918,7 +918,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       {allEstantes.length > 0 && (
         <div className="flex gap-3 flex-wrap items-center bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm">
           <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1 flex-shrink-0">
-            <MapPin size={10} className="text-indigo-400" /> Ubicación:
+            <MapPin size={10} className="text-blue-400" /> Ubicación:
           </span>
 
           {/* Estante */}
@@ -930,8 +930,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               className={cn(
                 "px-3 py-2 rounded-xl font-black text-xs border-2 outline-none transition-all cursor-pointer",
                 selectedEstante
-                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200"
+                  ? "border-blue-400 bg-blue-50 text-blue-700"
+                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-blue-200"
               )}
             >
               <option value="">Todos</option>
@@ -949,8 +949,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               className={cn(
                 "px-3 py-2 rounded-xl font-black text-xs border-2 outline-none transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
                 selectedColumna
-                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200"
+                  ? "border-blue-400 bg-blue-50 text-blue-700"
+                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-blue-200"
               )}
             >
               <option value="">Todas</option>
@@ -968,8 +968,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               className={cn(
                 "px-3 py-2 rounded-xl font-black text-xs border-2 outline-none transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
                 selectedFila
-                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-indigo-200"
+                  ? "border-blue-400 bg-blue-50 text-blue-700"
+                  : "border-gray-100 bg-gray-50 text-gray-600 hover:border-blue-200"
               )}
             >
               <option value="">Todas</option>
@@ -1040,10 +1040,10 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   whileHover={{ y: -5 }}
                   key={c._id}
                   onClick={() => setSelectedCategoryId(c._id)}
-                  className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden"
+                  className="bg-white p-5 sm:p-8 rounded-[28px] sm:rounded-[40px] shadow-[0_2px_16px_rgba(37,99,235,0.06)] border border-blue-100/70 hover:shadow-[0_16px_40px_rgba(37,99,235,0.18)] hover:border-blue-200 transition-all cursor-pointer group relative overflow-hidden"
                 >
                   <div className="flex justify-between items-start mb-6">
-                    <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                       <Tag size={32} />
                     </div>
                     <span className="text-[10px] font-black px-3 py-1 bg-gray-50 text-gray-400 rounded-full uppercase tracking-widest">
@@ -1105,13 +1105,13 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 <motion.div 
                   layout
                   key={p._id} 
-                  className="bg-white p-4 sm:p-7 rounded-[28px] sm:rounded-[40px] shadow-sm border border-gray-100 hover:shadow-2xl transition-all group relative overflow-hidden"
+                  className="bg-white p-4 sm:p-7 rounded-[28px] sm:rounded-[40px] shadow-[0_2px_16px_rgba(37,99,235,0.06)] border border-blue-100/70 hover:shadow-[0_16px_40px_rgba(37,99,235,0.18)] hover:border-blue-200 transition-all group relative overflow-hidden"
                 >
                   <div className="relative">
                     <div className="flex justify-between items-start mb-6">
                       <div className={cn(
                         "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-inner",
-                        isLowStock ? "bg-red-50 text-red-500" : "bg-gray-50 text-gray-400 group-hover:bg-indigo-600 group-hover:text-white"
+                        isLowStock ? "bg-red-50 text-red-500" : "bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white"
                       )}>
                         <Package size={28} />
                       </div>
@@ -1121,7 +1121,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                             setRestockingProduct(p);
                             setRestockData({ quantity: '', costPrice: String(p.costPrice) });
                           }}
-                          className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"
+                          className="p-2 sm:p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm"
                           title="Reponer Stock"
                         >
                           <RefreshCw size={18} />
@@ -1132,16 +1132,16 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                           title="Imprimir etiquetas">
                           <Printer size={18} />
                         </button>
-                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); setEditCostUsd(p.costPrice > 0 ? (p.costPrice / (exchangeRate || 6300)).toFixed(2) : ''); }} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); setEditCostUsd(p.costPrice > 0 ? (p.costPrice / (exchangeRate || 6300)).toFixed(2) : ''); }} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
                         <button onClick={() => handleDelete(p._id)} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                       </div>
                     </div>
 
-                    <h3 className="text-lg sm:text-2xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-indigo-600 transition-colors">{p.model}</h3>
+                    <h3 className="text-lg sm:text-2xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-blue-600 transition-colors">{p.model}</h3>
                     <div className="flex items-center gap-2 mb-6 flex-wrap">
                       {/* Categoría — solo visible en búsqueda global */}
                       {!selectedCategoryId && searchTerm && (
-                        <span className="text-[10px] font-black px-3 py-1 bg-violet-50 text-violet-600 rounded-full uppercase tracking-widest flex items-center gap-1">
+                        <span className="text-[10px] font-black px-3 py-1 bg-blue-50 text-blue-600 rounded-full uppercase tracking-widest flex items-center gap-1">
                           <Tag size={10} /> {categories.find(c => c._id === p.categoryId)?.name ?? 'Sin Asignar'}
                         </span>
                       )}
@@ -1151,7 +1151,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                         </span>
                       )}
                       {p.location && displayLocation(p.location) && (
-                        <span className="text-[10px] font-black px-3 py-1 bg-indigo-50 text-indigo-500 rounded-full uppercase tracking-widest flex items-center gap-1">
+                        <span className="text-[10px] font-black px-3 py-1 bg-blue-50 text-blue-500 rounded-full uppercase tracking-widest flex items-center gap-1">
                           <MapPin size={10} /> {displayLocation(p.location)}
                         </span>
                       )}
@@ -1229,25 +1229,25 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Modelo</label>
-                <input required value={newProduct.model} onChange={e => setNewProduct({...newProduct, model: e.target.value.toUpperCase()})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <input required value={newProduct.model} onChange={e => setNewProduct({...newProduct, model: e.target.value.toUpperCase()})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Categoría</label>
-                <select value={newProduct.categoryId} onChange={e => setNewProduct({...newProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                <select value={newProduct.categoryId} onChange={e => setNewProduct({...newProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
                   <option value="">Sin categoría</option>
                   {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Fabricante</label>
-                <select value={newProduct.manufacturerId ?? ''} onChange={e => setNewProduct({...newProduct, manufacturerId: e.target.value || undefined})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                <select value={newProduct.manufacturerId ?? ''} onChange={e => setNewProduct({...newProduct, manufacturerId: e.target.value || undefined})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
                   <option value="">Sin fabricante</option>
                   {manufacturers.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Inicial</label>
-                <NumericInput value={String(newProduct.purchasedQuantity ?? '')} onChange={raw => setNewProduct({...newProduct, purchasedQuantity: Number(raw) || 0, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput value={String(newProduct.purchasedQuantity ?? '')} onChange={raw => setNewProduct({...newProduct, purchasedQuantity: Number(raw) || 0, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Costo</label>
@@ -1285,7 +1285,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Normal · Cliente (Gs.)</label>
-                <NumericInput value={String(newProduct.salePrice ?? '')} onChange={raw => setNewProduct({...newProduct, salePrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput value={String(newProduct.salePrice ?? '')} onChange={raw => setNewProduct({...newProduct, salePrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
 
               {/* ── Precios adicionales ── */}
@@ -1311,7 +1311,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
 
               <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 flex items-center gap-1.5">
-                  <MapPin size={11} className="text-indigo-400" /> Ubicación en Estante
+                  <MapPin size={11} className="text-blue-400" /> Ubicación en Estante
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
@@ -1320,7 +1320,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       value={newLoc.estante}
                       onChange={e => setNewLoc({ ...newLoc, estante: e.target.value })}
                       placeholder="1"
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1329,7 +1329,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       value={newLoc.columna}
                       onChange={e => setNewLoc({ ...newLoc, columna: e.target.value })}
                       placeholder="A"
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1338,7 +1338,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       value={newLoc.fila}
                       onChange={e => setNewLoc({ ...newLoc, fila: e.target.value })}
                       placeholder="3"
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
                     />
                   </div>
                 </div>
@@ -1352,12 +1352,12 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                     value={newProduct.barcode}
                     onChange={e => setNewProduct({...newProduct, barcode: e.target.value})}
                     placeholder="Escaneá o escribí el código"
-                    className="w-full pl-12 p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold font-mono"
+                    className="w-full pl-12 p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold font-mono"
                   />
                 </div>
               </div>
             </div>
-            <button type="submit" className="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all">Guardar Producto</button>
+            <button type="submit" className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">Guardar Producto</button>
           </form>
         </Modal>
       )}
@@ -1367,8 +1367,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
           <div className="space-y-6">
 
             {/* Formulario nueva categoría */}
-            <form onSubmit={handleAddCategory} className="space-y-4 p-5 bg-indigo-50 rounded-3xl border border-indigo-100">
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Nueva Categoría</p>
+            <form onSubmit={handleAddCategory} className="space-y-4 p-5 bg-blue-50 rounded-3xl border border-blue-100">
+              <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Nueva Categoría</p>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nombre</label>
                 <input
@@ -1376,7 +1376,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   placeholder="Ej: Celulares, Accesorios..."
                   value={newCategory.name}
                   onChange={e => setNewCategory({ ...newCategory, name: e.target.value })}
-                  className="w-full p-4 bg-white border-2 border-transparent focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold"
+                  className="w-full p-4 bg-white border-2 border-transparent focus:border-blue-600 rounded-2xl outline-none transition-all font-bold"
                 />
               </div>
               {/* Tipo de categoría */}
@@ -1390,7 +1390,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                     className={cn(
                       "p-4 rounded-2xl border-2 text-left transition-all",
                       !newCategory.isLocal
-                        ? "border-indigo-600 bg-indigo-50"
+                        ? "border-blue-600 bg-blue-50"
                         : "border-gray-100 bg-gray-50 hover:border-gray-200"
                     )}>
                     <p className="text-sm font-black text-gray-800">📦 Producto Común</p>
@@ -1424,7 +1424,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       placeholder="2"
                       value={newCategory.warrantyDays}
                       onChange={raw => setNewCategory({ ...newCategory, warrantyDays: raw })}
-                      className="w-24 p-4 bg-white border-2 border-transparent focus:border-indigo-600 rounded-2xl outline-none transition-all font-black text-2xl text-center"
+                      className="w-24 p-4 bg-white border-2 border-transparent focus:border-blue-600 rounded-2xl outline-none transition-all font-black text-2xl text-center"
                     />
                     <span className="font-bold text-gray-500 text-sm">días</span>
                   </div>
@@ -1444,7 +1444,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   </div>
                 </div>
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white font-black py-3 rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+              <button type="submit" className="w-full bg-blue-600 text-white font-black py-3 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
                 Agregar Categoría
               </button>
             </form>
@@ -1456,19 +1456,19 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 {categories.map(c => (
                   editingCategory?._id === c._id ? (
                     // ── Editar categoría inline ──
-                    <form key={c._id} onSubmit={handleUpdateCategory} className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-2xl space-y-3">
+                    <form key={c._id} onSubmit={handleUpdateCategory} className="p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-3">
                       <input
                         required
                         value={editingCategory.name}
                         onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                        className="w-full p-3 bg-white border-2 border-transparent focus:border-indigo-600 rounded-xl outline-none font-bold text-sm"
+                        className="w-full p-3 bg-white border-2 border-transparent focus:border-blue-600 rounded-xl outline-none font-bold text-sm"
                       />
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <NumericInput
                             value={editingCategory.warrantyDays}
                             onChange={raw => setEditingCategory({ ...editingCategory, warrantyDays: raw })}
-                            className="w-16 p-3 bg-white border-2 border-transparent focus:border-indigo-600 rounded-xl outline-none font-black text-center text-lg"
+                            className="w-16 p-3 bg-white border-2 border-transparent focus:border-blue-600 rounded-xl outline-none font-black text-center text-lg"
                           />
                           <span className="text-xs font-bold text-gray-500">días garantía</span>
                         </div>
@@ -1497,17 +1497,17 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                           Cancelar
                         </button>
                         <button type="submit"
-                          className="flex-1 py-2 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700">
+                          className="flex-1 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700">
                           Guardar
                         </button>
                       </div>
                     </form>
                   ) : (
                     // ── Vista normal de categoría ──
-                    <div key={c._id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-indigo-100 transition-all group">
+                    <div key={c._id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl hover:border-blue-100 transition-all group">
                       <div>
                         <span className="font-bold text-gray-700">{c.name}</span>
-                        <span className="ml-2 text-[10px] font-black text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded-full">
+                        <span className="ml-2 text-[10px] font-black text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full">
                           {(c as any).warrantyDays ?? 2}d garantía
                         </span>
                         {(c as any).isLocal && (
@@ -1519,7 +1519,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       <div className="flex gap-1">
                         <button
                           onClick={() => setEditingCategory({ _id: c._id, name: c.name, warrantyDays: String((c as any).warrantyDays ?? 2), minStock: String(c.minStock ?? 5), isLocal: (c as any).isLocal ?? false })}
-                          className="p-2 text-gray-300 hover:text-indigo-500 transition-colors"
+                          className="p-2 text-gray-300 hover:text-blue-500 transition-colors"
                         >
                           <Edit2 size={16} />
                         </button>
@@ -1542,29 +1542,29 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Modelo</label>
-                <input required value={editingProduct.model} onChange={e => setEditingProduct({...editingProduct, model: e.target.value.toUpperCase()})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <input required value={editingProduct.model} onChange={e => setEditingProduct({...editingProduct, model: e.target.value.toUpperCase()})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Categoría</label>
-                <select value={editingProduct.categoryId ?? ''} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                <select value={editingProduct.categoryId ?? ''} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
                   <option value="">Sin categoría</option>
                   {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Fabricante</label>
-                <select value={editingProduct.manufacturerId ?? ''} onChange={e => setEditingProduct({...editingProduct, manufacturerId: e.target.value || undefined})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
+                <select value={editingProduct.manufacturerId ?? ''} onChange={e => setEditingProduct({...editingProduct, manufacturerId: e.target.value || undefined})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold">
                   <option value="">Sin fabricante</option>
                   {manufacturers.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Actual</label>
-                <NumericInput required value={String(editingProduct.quantity ?? '')} onChange={raw => setEditingProduct({...editingProduct, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput required value={String(editingProduct.quantity ?? '')} onChange={raw => setEditingProduct({...editingProduct, quantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Cantidad Total Comprada</label>
-                <NumericInput required value={String(editingProduct.purchasedQuantity ?? '')} onChange={raw => setEditingProduct({...editingProduct, purchasedQuantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput required value={String(editingProduct.purchasedQuantity ?? '')} onChange={raw => setEditingProduct({...editingProduct, purchasedQuantity: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
               <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Costo</label>
@@ -1602,7 +1602,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Precio Normal · Cliente (Gs.)</label>
-                <NumericInput required value={String(editingProduct.salePrice ?? '')} onChange={raw => setEditingProduct({...editingProduct, salePrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
+                <NumericInput required value={String(editingProduct.salePrice ?? '')} onChange={raw => setEditingProduct({...editingProduct, salePrice: Number(raw) || 0})} className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold" />
               </div>
 
               {/* ── Precios adicionales ── */}
@@ -1628,7 +1628,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
 
               <div className="col-span-full space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 flex items-center gap-1.5">
-                  <MapPin size={11} className="text-indigo-400" /> Ubicación en Estante
+                  <MapPin size={11} className="text-blue-400" /> Ubicación en Estante
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
@@ -1637,7 +1637,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       value={editLoc.estante}
                       onChange={e => setEditLoc({ ...editLoc, estante: e.target.value })}
                       placeholder="1"
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1646,7 +1646,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       value={editLoc.columna}
                       onChange={e => setEditLoc({ ...editLoc, columna: e.target.value })}
                       placeholder="A"
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1655,13 +1655,13 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                       value={editLoc.fila}
                       onChange={e => setEditLoc({ ...editLoc, fila: e.target.value })}
                       placeholder="3"
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-black text-center text-lg"
                     />
                   </div>
                 </div>
               </div>
             </div>
-            <button type="submit" className="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all">Actualizar Producto</button>
+            <button type="submit" className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">Actualizar Producto</button>
           </form>
         </Modal>
       )}
@@ -1674,11 +1674,11 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             className="bg-white rounded-[40px] p-8 shadow-2xl w-full max-w-sm"
           >
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+              <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
                 <Scan size={28} />
               </div>
               <div>
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Producto nuevo</p>
+                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Producto nuevo</p>
                 <h3 className="text-lg font-black text-gray-800">Código escaneado</h3>
                 <p className="text-xs font-mono text-gray-500">{scanCategoryModal.barcode}</p>
               </div>
@@ -1696,8 +1696,8 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   className={cn(
                     "w-full p-4 rounded-2xl text-left font-bold text-sm transition-all border-2",
                     scanSelectedCategory === c._id
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                      : "border-gray-100 bg-gray-50 text-gray-700 hover:border-indigo-200"
+                      ? "border-blue-600 bg-blue-50 text-blue-700"
+                      : "border-gray-100 bg-gray-50 text-gray-700 hover:border-blue-200"
                   )}
                 >
                   {c.name}
@@ -1724,7 +1724,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   setScanCategoryModal(null);
                   setIsAdding(true);
                 }}
-                className="flex-1 py-4 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-200 hover:bg-indigo-700 disabled:opacity-40 transition-all"
+                className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 disabled:opacity-40 transition-all"
               >
                 Continuar →
               </button>
@@ -1743,7 +1743,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   required
                   value={restockData.quantity}
                   onChange={raw => setRestockData({...restockData, quantity: raw})}
-                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold"
                   placeholder="0"
                 />
               </div>
@@ -1753,14 +1753,14 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   required
                   value={restockData.costPrice}
                   onChange={raw => setRestockData({...restockData, costPrice: raw})}
-                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-indigo-600 focus:bg-white rounded-2xl outline-none transition-all font-bold"
+                  className="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none transition-all font-bold"
                 />
               </div>
             </div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
               El stock actual es de {restockingProduct.quantity} unidades.
             </p>
-            <button type="submit" className="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all">Confirmar Reposición</button>
+            <button type="submit" className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">Confirmar Reposición</button>
           </form>
         </Modal>
       )}
@@ -1774,7 +1774,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
 
             {/* Info del producto */}
             <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 flex-shrink-0">
                 <Package size={22} />
               </div>
               <div className="min-w-0">
@@ -1800,7 +1800,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 <NumericInput
                   value={printQty}
                   onChange={raw => setPrintQty(raw || '1')}
-                  className="flex-1 text-center text-3xl font-black bg-gray-50 border-2 border-transparent focus:border-indigo-600 rounded-2xl py-3 outline-none transition-all"
+                  className="flex-1 text-center text-3xl font-black bg-gray-50 border-2 border-transparent focus:border-blue-600 rounded-2xl py-3 outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -1815,7 +1815,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   <button
                     type="button"
                     onClick={() => setPrintQty(String(printModal.quantity))}
-                    className="text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
+                    className="text-[10px] font-black text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
                     <Package size={10} /> Stock completo ({printModal.quantity})
                   </button>
                 )}
@@ -1841,12 +1841,12 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                   className={cn(
                     'w-full p-4 rounded-2xl border-2 font-black text-sm transition-all flex items-center justify-between',
                     printWithBarcode
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 bg-gray-50 text-gray-500'
                   )}>
                   <span className="flex items-center gap-2">
                     <span className={cn('w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0',
-                      printWithBarcode ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
+                      printWithBarcode ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
                     )}>
                       {printWithBarcode && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </span>
@@ -1898,7 +1898,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                 const qty = Math.max(1, parseInt(printQty) || 1);
                 printProductLabels(printModal, qty, printWithBarcode && !!printModal.barcode);
               }}
-              className="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+              className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
               <Printer size={18} />
               Imprimir {parseInt(printQty) || 1} etiqueta{(parseInt(printQty) || 1) !== 1 ? 's' : ''}
             </button>
@@ -1918,17 +1918,17 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
       {isManagingManufacturers && (
         <Modal title="Gestionar Fabricantes" onClose={() => { setIsManagingManufacturers(false); setEditingManufacturer(null); setNewManufacturerName(''); }}>
           <div className="space-y-6">
-            <form onSubmit={handleAddManufacturer} className="space-y-3 p-5 bg-indigo-50 rounded-3xl border border-indigo-100">
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Nuevo Fabricante</p>
+            <form onSubmit={handleAddManufacturer} className="space-y-3 p-5 bg-blue-50 rounded-3xl border border-blue-100">
+              <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Nuevo Fabricante</p>
               <div className="flex gap-3">
                 <input
                   required
                   placeholder="Ej: Samsung, Xiaomi, Motorola..."
                   value={newManufacturerName}
                   onChange={e => setNewManufacturerName(e.target.value)}
-                  className="flex-1 p-4 bg-white border-2 border-transparent focus:border-indigo-600 rounded-2xl outline-none transition-all font-bold"
+                  className="flex-1 p-4 bg-white border-2 border-transparent focus:border-blue-600 rounded-2xl outline-none transition-all font-bold"
                 />
-                <button type="submit" className="px-6 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm">
+                <button type="submit" className="px-6 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-sm">
                   Agregar
                 </button>
               </div>
@@ -1947,9 +1947,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                           required
                           value={editingManufacturer.name}
                           onChange={e => setEditingManufacturer({ ...editingManufacturer, name: e.target.value })}
-                          className="flex-1 p-3 bg-gray-50 border-2 border-indigo-400 rounded-2xl outline-none font-bold text-sm"
+                          className="flex-1 p-3 bg-gray-50 border-2 border-blue-400 rounded-2xl outline-none font-bold text-sm"
                         />
-                        <button type="submit" className="px-4 bg-indigo-600 text-white font-black rounded-2xl text-sm hover:bg-indigo-700">Guardar</button>
+                        <button type="submit" className="px-4 bg-blue-600 text-white font-black rounded-2xl text-sm hover:bg-blue-700">Guardar</button>
                         <button type="button" onClick={() => setEditingManufacturer(null)} className="px-4 bg-gray-100 text-gray-600 font-black rounded-2xl text-sm hover:bg-gray-200">✕</button>
                       </form>
                     ) : (
@@ -1957,7 +1957,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                         <span className="font-black text-gray-800">{m.name}</span>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => setEditingManufacturer({ _id: m._id, name: m.name })}
-                            className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-colors">
+                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors">
                             <Edit2 size={15} />
                           </button>
                           <button onClick={() => handleDeleteManufacturer(m._id)}
