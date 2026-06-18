@@ -1092,131 +1092,116 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
             })()}
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             key="products"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            className="bg-white rounded-3xl border border-blue-100 shadow-[0_2px_16px_rgba(37,99,235,0.06)] overflow-hidden"
           >
-            {filteredProducts.map((p) => {
-              const isLowStock = p.quantity <= p.purchasedQuantity * 0.1;
-              return (
-                <motion.div 
-                  layout
-                  key={p._id} 
-                  className="bg-white p-4 sm:p-7 rounded-[28px] sm:rounded-[40px] shadow-[0_2px_16px_rgba(37,99,235,0.06)] border border-blue-100/70 hover:shadow-[0_16px_40px_rgba(37,99,235,0.18)] hover:border-blue-200 transition-all group relative overflow-hidden"
-                >
-                  <div className="relative">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className={cn(
-                        "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-inner",
-                        isLowStock ? "bg-red-50 text-red-500" : "bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white"
-                      )}>
-                        <Package size={28} />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setRestockingProduct(p);
-                            setRestockData({ quantity: '', costPrice: String(p.costPrice) });
-                          }}
-                          className="p-2 sm:p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm"
-                          title="Reponer Stock"
-                        >
-                          <RefreshCw size={18} />
-                        </button>
-                        <button
-                          onClick={() => { setPrintModal(p); setPrintQty(String(p.quantity || 1)); setPrintWithBarcode(!!p.barcode); }}
-                          className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all shadow-sm"
-                          title="Imprimir etiquetas">
-                          <Printer size={18} />
-                        </button>
-                        <button onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); setEditCostUsd(p.costPrice > 0 ? (p.costPrice / (exchangeRate || 6300)).toFixed(2) : ''); }} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
-                        <button onClick={() => handleDelete(p._id)} className="p-2 sm:p-3 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
-
-                    <h3 className="text-lg sm:text-2xl font-black text-gray-800 mb-2 tracking-tight group-hover:text-blue-600 transition-colors">{p.model}</h3>
-                    <div className="flex items-center gap-2 mb-6 flex-wrap">
-                      {/* Categoría — solo visible en búsqueda global */}
-                      {!selectedCategoryId && searchTerm && (
-                        <span className="text-[10px] font-black px-3 py-1 bg-blue-50 text-blue-600 rounded-full uppercase tracking-widest flex items-center gap-1">
-                          <Tag size={10} /> {categories.find(c => c._id === p.categoryId)?.name ?? 'Sin Asignar'}
-                        </span>
-                      )}
-                      {isLowStock && (
-                        <span className="text-[10px] font-black px-3 py-1 bg-red-100 text-red-600 rounded-full uppercase tracking-widest flex items-center gap-1">
-                          <AlertTriangle size={10} /> En Falta
-                        </span>
-                      )}
-                      {p.location && displayLocation(p.location) && (
-                        <span className="text-[10px] font-black px-3 py-1 bg-blue-50 text-blue-500 rounded-full uppercase tracking-widest flex items-center gap-1">
-                          <MapPin size={10} /> {displayLocation(p.location)}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Stock</p>
-                        <p className={cn("text-2xl font-black tracking-tighter", isLowStock ? "text-red-500" : "text-gray-800")}>
-                          {p.quantity} <span className="text-xs text-gray-400 font-bold">/ {p.purchasedQuantity}</span>
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Precio Normal</p>
-                        <p className="text-2xl font-black text-emerald-500 tracking-tighter">Gs. {p.salePrice.toLocaleString()}</p>
-                        {((p.priceWholesale ?? 0) > 0 || (p.priceCheap ?? 0) > 0) && (
-                          <div className="flex gap-1 mt-1.5 flex-wrap">
-                            {(p.priceWholesale ?? 0) > 0 && (
-                              <span className="text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg">
-                                🏪 {(p.priceWholesale!).toLocaleString()}
-                              </span>
-                            )}
-                            {(p.priceCheap ?? 0) > 0 && (
-                              <span className="text-[9px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">
-                                💸 {(p.priceCheap!).toLocaleString()}
-                              </span>
-                            )}
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full min-w-[860px] border-collapse">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-blue-50/70 border-b-2 border-blue-100">
+                    <th className="text-left px-4 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Modelo</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Ubicación</th>
+                    <th className="text-center px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Stock</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Costo</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Normal</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Mayorista</th>
+                    <th className="text-right px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Tacaño</th>
+                    <th className="text-left px-3 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Proveedor</th>
+                    <th className="text-center px-4 py-3 text-[10px] font-black text-blue-900/70 uppercase tracking-widest">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.map((p) => {
+                    const isLowStock = p.quantity <= p.purchasedQuantity * 0.1;
+                    const stockColor = p.quantity === 0 ? 'text-red-500' : isLowStock ? 'text-amber-500' : 'text-emerald-600';
+                    const fmt = (n: number) => (n ?? 0) > 0 ? n.toLocaleString('es-PY') : '—';
+                    const fabricante = p.manufacturerId ? manufacturers.find(m => m._id === p.manufacturerId)?.name : '';
+                    return (
+                      <tr key={p._id} className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
+                        {/* Modelo */}
+                        <td className="px-4 py-3 max-w-[260px]">
+                          <div className="flex items-center gap-2">
+                            <div className={cn("w-2 h-2 rounded-full shrink-0", p.quantity === 0 ? "bg-red-400" : isLowStock ? "bg-amber-400" : "bg-emerald-400")} />
+                            <span className="font-bold text-sm text-gray-800 leading-tight">{p.model}</span>
+                            {p.isWholesale && <span className="text-[8px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded uppercase shrink-0">May</span>}
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-gray-50 space-y-2">
-                      {/* Fabricante */}
-                      {p.manufacturerId && manufacturers.find(m => m._id === p.manufacturerId) && (
-                        <div>
-                          <span className="text-[9px] font-black px-2.5 py-1 bg-sky-50 text-sky-600 rounded-full uppercase tracking-widest border border-sky-100">
-                            {manufacturers.find(m => m._id === p.manufacturerId)?.name}
-                          </span>
-                        </div>
-                      )}
-                      {/* Costo en verde con Gs + USD */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 flex-1">
-                          <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none">Costo</p>
-                          <p className="text-sm font-black text-emerald-700 tracking-tight mt-0.5 leading-none">
-                            Gs. {p.costPrice.toLocaleString()}
-                          </p>
-                          {p.costPrice > 0 && (
-                            <p className="text-[9px] font-bold text-emerald-400 mt-1 leading-none">
-                              USD {(p.costPrice / (exchangeRate || 6300)).toFixed(2)}
-                            </p>
+                          {!selectedCategoryId && searchTerm && (
+                            <span className="text-[10px] font-bold text-blue-500 ml-4">{categories.find(c => c._id === p.categoryId)?.name ?? 'Sin Asignar'}</span>
                           )}
-                        </div>
-                        {p.isWholesale && (
-                          <span className="text-[9px] font-black text-purple-500 bg-purple-50 px-2.5 py-1.5 rounded-full uppercase tracking-widest border border-purple-100 flex-shrink-0">
-                            Mayorista
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                        </td>
+                        {/* Ubicación */}
+                        <td className="px-3 py-3 text-center">
+                          {p.location && displayLocation(p.location) ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg font-mono">
+                              <MapPin size={11} /> {displayLocation(p.location)}
+                            </span>
+                          ) : <span className="text-gray-300">—</span>}
+                        </td>
+                        {/* Stock */}
+                        <td className="px-3 py-3 text-center">
+                          <span className={cn("text-base font-black", stockColor)}>{p.quantity}</span>
+                          <span className="text-[11px] text-gray-400 font-bold"> / {p.purchasedQuantity}</span>
+                        </td>
+                        {/* Costo */}
+                        <td className="px-3 py-3 text-right">
+                          <span className="text-sm font-bold text-gray-700 whitespace-nowrap">{fmt(p.costPrice)}</span>
+                          {p.costPrice > 0 && <p className="text-[9px] font-bold text-gray-400 leading-none">USD {(p.costPrice / (exchangeRate || 6300)).toFixed(2)}</p>}
+                        </td>
+                        {/* Normal */}
+                        <td className="px-3 py-3 text-right">
+                          <span className={cn("text-sm font-black whitespace-nowrap", p.salePrice > 0 ? "text-emerald-600" : "text-gray-300")}>{fmt(p.salePrice)}</span>
+                        </td>
+                        {/* Mayorista */}
+                        <td className="px-3 py-3 text-right">
+                          <span className={cn("text-sm font-bold whitespace-nowrap", (p.priceWholesale ?? 0) > 0 ? "text-purple-600" : "text-gray-300")}>{fmt(p.priceWholesale ?? 0)}</span>
+                        </td>
+                        {/* Tacaño */}
+                        <td className="px-3 py-3 text-right">
+                          <span className={cn("text-sm font-bold whitespace-nowrap", (p.priceCheap ?? 0) > 0 ? "text-orange-500" : "text-gray-300")}>{fmt(p.priceCheap ?? 0)}</span>
+                        </td>
+                        {/* Proveedor / fabricante */}
+                        <td className="px-3 py-3">
+                          {fabricante ? <span className="text-xs font-semibold text-gray-500">{fabricante}</span> : <span className="text-gray-300">—</span>}
+                        </td>
+                        {/* Acciones */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => { setRestockingProduct(p); setRestockData({ quantity: '', costPrice: String(p.costPrice) }); }}
+                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all"
+                              title="Reponer stock">
+                              <RefreshCw size={16} />
+                            </button>
+                            <button
+                              onClick={() => { setEditingProduct(p); setEditLoc(parseLocation(p.location || '')); setEditCostUsd(p.costPrice > 0 ? (p.costPrice / (exchangeRate || 6300)).toFixed(2) : ''); }}
+                              className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all"
+                              title="Editar producto">
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => { setPrintModal(p); setPrintQty(String(p.quantity || 1)); setPrintWithBarcode(!!p.barcode); }}
+                              className="p-2 bg-gray-50 text-gray-400 hover:bg-gray-200 hover:text-gray-600 rounded-lg transition-all"
+                              title="Imprimir etiquetas">
+                              <Printer size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(p._id)}
+                              className="p-2 bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-lg transition-all"
+                              title="Eliminar">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
