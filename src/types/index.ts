@@ -58,6 +58,7 @@ export interface FixedCost {
 export interface Product {
   _id: string;
   model: string;
+  code?: string;          // Código corto autogenerado (1 letra + 3 números), buscable
   categoryId?: string;
   quantity: number;
   purchasedQuantity: number;

@@ -217,6 +217,7 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
     const { estante, columna, fila } = parseLocation(p.location || '');
     const matchesSearch = !q
       || p.model.toLowerCase().includes(q)
+      || (p.code || '').toLowerCase().includes(q)
       || (manufacturers.find(m => m._id === p.manufacturerId)?.name ?? '').toLowerCase().includes(q)
       || displayLocation(p.location || '').toLowerCase().includes(q)
       || estante.toLowerCase().includes(q)
@@ -1129,6 +1130,9 @@ export const StockView = ({ products, categories, manufacturers, onRefresh, exch
                             <span className="font-bold text-sm text-gray-800 leading-tight">{p.model}</span>
                             {p.isWholesale && <span className="text-[8px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded uppercase shrink-0">May</span>}
                           </div>
+                          {p.code && (
+                            <span className="inline-block text-[10px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded ml-4 mt-0.5 font-mono tracking-wider">{p.code}</span>
+                          )}
                           {!selectedCategoryId && searchTerm && (
                             <span className="text-[10px] font-bold text-blue-500 ml-4">{categories.find(c => c._id === p.categoryId)?.name ?? 'Sin Asignar'}</span>
                           )}

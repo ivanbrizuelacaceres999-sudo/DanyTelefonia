@@ -631,10 +631,9 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
     (p.location || '').replace(/\|/g, '').trim().length > 0;
 
   const filteredProducts = products.filter(p =>
-    n(p.quantity) > 0 &&
-    hasLocation(p) &&
+    (p.isWholesale || (n(p.quantity) > 0 && hasLocation(p))) &&
     (categoryFilter === 'all' || p.categoryId === categoryFilter) &&
-    (!searchTerm || p.model.toLowerCase().includes(searchTerm.toLowerCase()))
+    (!searchTerm || p.model.toLowerCase().includes(searchTerm.toLowerCase()) || (p.code || '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
   // Solo reparaciones con estado 'listo' — se entregan al cobrar
   const readyRepairs = repairs.filter(r =>
@@ -946,6 +945,7 @@ export const CashierView = ({ user, products, repairs, wholesalers, reventaItems
                           <Package size={18} />
                         </div>
                         <p className="font-black text-gray-800 text-sm leading-snug">{p.model}</p>
+                        {p.code && <span className="inline-block text-[9px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded mt-1 font-mono tracking-wider w-fit">{p.code}</span>}
                         <p className="text-[10px] font-bold text-gray-400 mt-0.5">Stock: {p.quantity}</p>
                         {displayLocation(p.location || '') && (
                           <p className="text-[9px] font-bold text-indigo-400 mt-0.5 flex items-center gap-0.5 truncate">
